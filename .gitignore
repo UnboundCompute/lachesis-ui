@@ -1,0 +1,10 @@
+# Build output
+/lachesis-ui
+/dist/
+
+# Go
+*.test
+*.out
+
+# OS
+.DS_Store
