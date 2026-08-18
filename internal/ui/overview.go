@@ -16,7 +16,7 @@ type overviewModel struct {
 	root string
 	hubs []mcp.Hub
 
-	subs    []subRow // subsystem cards, hub-density-ranked
+	subs    []subRow  // subsystem cards, hub-density-ranked
 	entries []mcp.Hub // exported / dispatch / callback entry points
 	spine   []mcp.Hub // highest-degree nodes
 
@@ -184,8 +184,8 @@ func (m *overviewModel) view(a *App, h int) string {
 	return b.String()
 }
 
-func (m *overviewModel) rowIndexOfSub(i int) int  { return i }
-func (m *overviewModel) rowIndexOfHub(i int) int  { return len(m.subs) + i }
+func (m *overviewModel) rowIndexOfSub(i int) int { return i }
+func (m *overviewModel) rowIndexOfHub(i int) int { return len(m.subs) + i }
 
 func relHandle(root, file string, line int) string {
 	return fmt.Sprintf("%s:%d", relPath(root, file), line)

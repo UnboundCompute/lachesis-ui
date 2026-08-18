@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# install.sh — bootstrap the whole lachesis stack for lachesis-ui.
+# install.sh: bootstrap the whole lachesis stack for lachesis-ui.
 #
 # Pulls and builds the three pieces the UI needs and wires them together:
 #
-#   1. the engine  — UnboundCompute/lachesis  (Python; the code-graph builder,
-#                    nav layer, and MCP server the UI talks to)
-#   2. the catalog — UnboundCompute/atropos   (the sink/taint models the engine
-#                    reads; cloned as a sibling so the engine auto-discovers it)
-#   3. the UI      — this repo                 (the Go terminal binary)
+#   1. the engine  (UnboundCompute/lachesis): Python; the code-graph builder,
+#                  nav layer, and MCP server the UI talks to
+#   2. the catalog (UnboundCompute/atropos): the sink/taint models the engine
+#                  reads; cloned as a sibling so the engine auto-discovers it
+#   3. the UI      (this repo): the Go terminal binary
 #
 # It creates the standard layout the UI already knows how to discover:
 #
@@ -46,7 +46,7 @@ need() { command -v "$1" >/dev/null 2>&1 || die "missing required tool: $1"; }
 # ---- preflight ------------------------------------------------------------
 need git
 need "$PYTHON"
-command -v go >/dev/null 2>&1 || warn "go not found — will try 'go install' fallback only if you have it; otherwise install Go 1.22+ to build the UI"
+command -v go >/dev/null 2>&1 || warn "go not found. Install Go 1.24+ to build the UI (a 'go install' fallback is tried only if you have go)"
 
 mkdir -p "$SRC" "$BIN" "$GRAPHS"
 
@@ -55,7 +55,7 @@ clone_or_update() {
   local url="$1" dir="$2" name="$3"
   if [ -d "$dir/.git" ]; then
     info "updating $name"
-    git -C "$dir" pull --ff-only --quiet || warn "$name: could not fast-forward (local changes?) — leaving as is"
+    git -C "$dir" pull --ff-only --quiet || warn "$name: could not fast-forward (local changes?), leaving as is"
   else
     info "cloning $name"
     git clone --depth 1 --quiet "$url" "$dir"

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1046" height="894" viewBox="0 0 1046 894" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13px">
+<rect x="0.5" y="0.5" width="1045" height="893" rx="9" fill="#0b0d13" stroke="#232838"/>
+<rect x="1" y="1" width="1044" height="30" rx="9" fill="#0e1119"/>
+<rect x="1" y="22" width="1044" height="9" fill="#0e1119"/>
+<circle cx="20" cy="15" r="5.5" fill="#e06c75"/>
+<circle cx="38" cy="15" r="5.5" fill="#d19a66"/>
+<circle cx="56" cy="15" r="5.5" fill="#98c379"/>
+<text x="523.0" y="19.0" fill="#6b7488" text-anchor="middle">lachesis-ui · overview</text>
+<text x="23.8" y="58.0" fill="#98c379" font-weight="700" textLength="62.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">NAVIGATE</text>
+<text x="109.6" y="58.0" fill="#56b6c2" font-weight="700" textLength="62.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">Overview</text>
+<text x="998.8" y="58.0" fill="#6b7488" textLength="31.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl</text>
+<text x="16.0" y="77.0" fill="#4f5768" textLength="1014.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</text>
+<text x="16.0" y="96.0" fill="#c3cadb" textLength="202.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">a code-property-graph over</text>
+<text x="226.6" y="96.0" fill="#eef1f7" font-weight="700" textLength="31.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl</text>
+<text x="265.6" y="96.0" fill="#6b7488" textLength="468.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">— organized the way a developer reads it, not as a raw graph</text>
+<text x="16.0" y="134.0" fill="#4f5768" textLength="78.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">SUBSYSTEMS</text>
+<text x="109.6" y="134.0" fill="#6b7488" textLength="499.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">— what lives where (ranked by how much of the spine sits inside)</text>
+<text x="16.0" y="153.0" fill="#56b6c2" font-weight="700" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▌</text>
+<text x="31.6" y="153.0" fill="#eef1f7" font-weight="700" textLength="23.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib</text>
+<text x="164.2" y="153.0" fill="#6b7488" textLength="171.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">38 hubs · core library</text>
+<text x="31.6" y="172.0" fill="#eef1f7" font-weight="700" textLength="23.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">src</text>
+<text x="172.0" y="172.0" fill="#6b7488" textLength="163.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">2 hubs · core library</text>
+<text x="16.0" y="210.0" fill="#4f5768" textLength="93.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ENTRY POINTS</text>
+<text x="125.2" y="210.0" fill="#6b7488" textLength="179.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">— how execution gets in</text>
+<text x="31.6" y="229.0" fill="#c3cadb" textLength="78.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">Curl_failf</text>
+<text x="242.2" y="229.0" fill="#61afef" textLength="140.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/curl_trc.c:176</text>
+<text x="484.0" y="229.0" fill="#c678dd" textLength="202.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">exported · dispatch_target</text>
+<text x="31.6" y="248.0" fill="#c3cadb" textLength="78.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">Curl_infof</text>
+<text x="242.2" y="248.0" fill="#61afef" textLength="140.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/curl_trc.c:270</text>
+<text x="484.0" y="248.0" fill="#c678dd" textLength="202.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">exported · dispatch_target</text>
+<text x="31.6" y="267.0" fill="#c3cadb" textLength="124.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_easy_setopt</text>
+<text x="242.2" y="267.0" fill="#61afef" textLength="132.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/setopt.c:2915</text>
+<text x="484.0" y="267.0" fill="#c678dd" textLength="202.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">exported · dispatch_target</text>
+<text x="31.6" y="286.0" fill="#c3cadb" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_easy_init</text>
+<text x="242.2" y="286.0" fill="#61afef" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/easy.c:332</text>
+<text x="484.0" y="286.0" fill="#c678dd" textLength="202.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">exported · dispatch_target</text>
+<text x="31.6" y="305.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_global_cleanup</text>
+<text x="242.2" y="305.0" fill="#61afef" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/easy.c:256</text>
+<text x="484.0" y="305.0" fill="#c678dd" textLength="202.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">exported · dispatch_target</text>
+<text x="31.6" y="324.0" fill="#c3cadb" textLength="132.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_easy_cleanup</text>
+<text x="242.2" y="324.0" fill="#61afef" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/easy.c:850</text>
+<text x="484.0" y="324.0" fill="#c678dd" textLength="202.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">exported · dispatch_target</text>
+<text x="16.0" y="362.0" fill="#98c379" font-weight="700" textLength="78.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">start here</text>
+<text x="101.8" y="362.0" fill="#6b7488" textLength="257.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">— the spine, highest-degree first</text>
+<text x="31.6" y="381.0" fill="#56b6c2" textLength="78.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">Curl_failf</text>
+<text x="242.2" y="381.0" fill="#6b7488" textLength="54.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">deg 220</text>
+<text x="312.4" y="381.0" fill="#4f5768" textLength="140.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/curl_trc.c:176</text>
+<text x="31.6" y="400.0" fill="#56b6c2" textLength="78.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">Curl_infof</text>
+<text x="242.2" y="400.0" fill="#6b7488" textLength="54.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">deg 159</text>
+<text x="312.4" y="400.0" fill="#4f5768" textLength="140.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/curl_trc.c:270</text>
+<text x="31.6" y="419.0" fill="#56b6c2" textLength="124.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_easy_setopt</text>
+<text x="242.2" y="419.0" fill="#6b7488" textLength="54.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">deg 149</text>
+<text x="312.4" y="419.0" fill="#4f5768" textLength="132.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/setopt.c:2915</text>
+<text x="31.6" y="438.0" fill="#56b6c2" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_easy_init</text>
+<text x="242.2" y="438.0" fill="#6b7488" textLength="54.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">deg 131</text>
+<text x="312.4" y="438.0" fill="#4f5768" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/easy.c:332</text>
+<text x="31.6" y="457.0" fill="#56b6c2" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_global_cleanup</text>
+<text x="242.2" y="457.0" fill="#6b7488" textLength="54.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">deg 128</text>
+<text x="312.4" y="457.0" fill="#4f5768" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/easy.c:256</text>
+<text x="31.6" y="476.0" fill="#56b6c2" textLength="132.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_easy_cleanup</text>
+<text x="242.2" y="476.0" fill="#6b7488" textLength="54.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">deg 128</text>
+<text x="312.4" y="476.0" fill="#4f5768" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/easy.c:850</text>
+</svg>

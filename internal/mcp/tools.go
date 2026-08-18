@@ -20,15 +20,15 @@ type Symbol struct {
 
 // Hub is a centrality-ranked node from hubs.
 type Hub struct {
-	NodeID  string   `json:"node_id"`
-	Name    string   `json:"name"`
-	Handle  string   `json:"handle"`
-	File    string   `json:"file"`
-	Line    int      `json:"line"`
-	FanIn   int      `json:"fan_in"`
-	FanOut  int      `json:"fan_out"`
-	Degree  int      `json:"degree"`
-	Flags   []string `json:"flags"` // exported | dispatch_target | callback
+	NodeID string   `json:"node_id"`
+	Name   string   `json:"name"`
+	Handle string   `json:"handle"`
+	File   string   `json:"file"`
+	Line   int      `json:"line"`
+	FanIn  int      `json:"fan_in"`
+	FanOut int      `json:"fan_out"`
+	Degree int      `json:"degree"`
+	Flags  []string `json:"flags"` // exported | dispatch_target | callback
 }
 
 // ---- hubs -----------------------------------------------------------------
