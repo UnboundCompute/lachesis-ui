@@ -36,6 +36,51 @@ func Of(file string) string {
 	return segs[i]
 }
 
+// Module returns a finer-grained label than Of: the module a symbol lives in.
+// For a flat source root (curl's lib/http.c, lib/ftp.c) each translation unit is
+// its own module, so we key on the file stem ("http", "ftp"); for a nested tree
+// (lib/vtls/openssl.c, pkg/api/routes.py) the enclosing directory is the module
+// ("vtls", "api"). This is what makes "who calls this" read as "30 from HTTP,
+// 25 from FTP" instead of one undifferentiated pile.
+func Module(file string) string {
+	p := normalize(file)
+	if p == "" {
+		return "(root)"
+	}
+	segs := strings.Split(p, "/")
+	if len(segs) == 1 {
+		return stem(segs[0]) // a top-level file is its own module
+	}
+	parent := segs[len(segs)-2]
+	if isFlatRoot(parent) {
+		return stem(segs[len(segs)-1]) // flat area: the file is the module
+	}
+	return parent
+}
+
+// stem strips the directory-less filename down to its base identity: no
+// extension, and no leading path noise.
+func stem(name string) string {
+	base := name
+	if i := strings.LastIndex(base, "/"); i >= 0 {
+		base = base[i+1:]
+	}
+	if i := strings.LastIndex(base, "."); i > 0 {
+		base = base[:i]
+	}
+	return base
+}
+
+// isFlatRoot reports whether a directory conventionally holds a flat pile of
+// modules (so the file, not the dir, names the module).
+func isFlatRoot(seg string) bool {
+	switch seg {
+	case "lib", "src", "pkg", "source", "sources":
+		return true
+	}
+	return false
+}
+
 // Group buckets items by subsystem, preserving input order within each bucket
 // and returning buckets sorted by descending size then name.
 type Bucket[T any] struct {
@@ -43,20 +88,31 @@ type Bucket[T any] struct {
 	Items []T
 }
 
-// GroupBy buckets items by a subsystem label derived from each item's path.
+// GroupBy buckets items by a subsystem label (coarse: Of) derived from each
+// item's path.
 func GroupBy[T any](items []T, pathOf func(T) string) []Bucket[T] {
+	return groupWith(items, pathOf, Of)
+}
+
+// GroupByModule buckets items by module (fine: Module) — the right grain for a
+// symbol's neighborhood, where "who calls this" wants per-module counts.
+func GroupByModule[T any](items []T, pathOf func(T) string) []Bucket[T] {
+	return groupWith(items, pathOf, Module)
+}
+
+func groupWith[T any](items []T, pathOf func(T) string, label func(string) string) []Bucket[T] {
 	order := []string{}
 	byLabel := map[string][]T{}
 	for _, it := range items {
-		label := Of(pathOf(it))
-		if _, seen := byLabel[label]; !seen {
-			order = append(order, label)
+		lbl := label(pathOf(it))
+		if _, seen := byLabel[lbl]; !seen {
+			order = append(order, lbl)
 		}
-		byLabel[label] = append(byLabel[label], it)
+		byLabel[lbl] = append(byLabel[lbl], it)
 	}
 	out := make([]Bucket[T], 0, len(order))
-	for _, label := range order {
-		out = append(out, Bucket[T]{Label: label, Items: byLabel[label]})
+	for _, lbl := range order {
+		out = append(out, Bucket[T]{Label: lbl, Items: byLabel[lbl]})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if len(out[i].Items) != len(out[j].Items) {

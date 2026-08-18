@@ -38,8 +38,8 @@ func (m *neighModel) onLoaded(msg neighborhoodLoadedMsg) {
 	m.body = msg.body
 	m.hasBody = msg.hasBody
 	key := func(s mcp.Symbol) string { return relPath(msg.root, s.File) }
-	m.callerGroups = subsystem.GroupBy(msg.callers, key)
-	m.calleeGroups = subsystem.GroupBy(msg.callees, key)
+	m.callerGroups = subsystem.GroupByModule(msg.callers, key)
+	m.calleeGroups = subsystem.GroupByModule(msg.callees, key)
 	m.pane = 0
 	m.sel = [2]int{0, 0}
 }
