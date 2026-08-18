@@ -99,7 +99,7 @@ func loadOutlineCmd(c *mcp.Client, file string) tea.Cmd {
 		}
 		note := ""
 		if len(decls) == 0 {
-			note = "no symbol index for this file — rebuild the graph with the declaration layer, or use / to search symbols"
+			note = "this file declares no functions, methods, or types — it may hold only macros, data, or comments"
 		}
 		return outlineLoadedMsg{file: file, decls: decls, note: note}
 	}

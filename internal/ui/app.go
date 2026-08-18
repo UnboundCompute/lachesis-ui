@@ -117,6 +117,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.ready = true
 		a.root = msg.root
 		a.overview.onLoaded(msg)
+		// If the user already jumped to the tree while the graph was still
+		// loading, its open() bailed for want of a root — open it now.
+		if a.view == viewTree && !a.tree.loaded() {
+			return a, a.tree.open(&a, "")
+		}
 		return a, nil
 	case folderLoadedMsg:
 		a.tree.onFolder(msg)
@@ -280,7 +285,7 @@ func (a App) renderStatus() string {
 	case viewOverview:
 		hints = key("↑↓", "move") + key("enter", "open") + key("t", "tree") + key("/", "search")
 	case viewTree:
-		hints = key("↑↓", "move") + key("→/enter", "open") + key("←", "up") + key("b", "body") + key("/", "search")
+		hints = key("↑↓", "move") + key("→", "expand") + key("←", "collapse") + key("enter", "open symbol") + key("/", "search")
 	case viewNeighborhood:
 		hints = key("↑↓", "move") + key("enter", "re-center") + key("tab", "switch pane") + key("t", "tree")
 	}

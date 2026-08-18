@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Engine (lachesis)
+    url: https://github.com/UnboundCompute/lachesis/issues
+    about: Report issues with graph construction or analysis here, not in the UI repo.
+  - name: Security report
+    url: https://github.com/UnboundCompute/lachesis-ui/security/advisories/new
+    about: Report a vulnerability privately. Please do not open a public issue.

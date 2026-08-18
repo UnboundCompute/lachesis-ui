@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1046" height="894" viewBox="0 0 1046 894" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13px">
+<rect x="0.5" y="0.5" width="1045" height="893" rx="9" fill="#0b0d13" stroke="#232838"/>
+<rect x="1" y="1" width="1044" height="30" rx="9" fill="#0e1119"/>
+<rect x="1" y="22" width="1044" height="9" fill="#0e1119"/>
+<circle cx="20" cy="15" r="5.5" fill="#e06c75"/>
+<circle cx="38" cy="15" r="5.5" fill="#d19a66"/>
+<circle cx="56" cy="15" r="5.5" fill="#98c379"/>
+<text x="523.0" y="19.0" fill="#6b7488" text-anchor="middle">lachesis-ui · neighborhood</text>
+<text x="23.8" y="58.0" fill="#98c379" font-weight="700" textLength="62.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">NAVIGATE</text>
+<text x="109.6" y="58.0" fill="#6b7488" textLength="62.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">Overview</text>
+<text x="179.8" y="58.0" fill="#4f5768" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">/</text>
+<text x="195.4" y="58.0" fill="#56b6c2" font-weight="700" textLength="78.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">Curl_failf</text>
+<text x="998.8" y="58.0" fill="#6b7488" textLength="31.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl</text>
+<text x="16.0" y="77.0" fill="#4f5768" textLength="1014.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</text>
+<text x="16.0" y="96.0" fill="#eef1f7" font-weight="700" textLength="78.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">Curl_failf</text>
+<text x="109.6" y="96.0" fill="#6b7488" textLength="179.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">reached by 217 · uses 3</text>
+<text x="16.0" y="115.0" fill="#232838" textLength="1014.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮</text>
+<text x="16.0" y="134.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="134.0" fill="#4f5768" textLength="171.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">lib/curl_trc.c:176–195</text>
+<text x="1022.2" y="134.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="16.0" y="153.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="153.0" fill="#6b7488" textLength="475.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">void Curl_failf(struct Curl_easy *data, const char *fmt, ...)</text>
+<text x="1022.2" y="153.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="16.0" y="172.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="172.0" fill="#6b7488" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">{</text>
+<text x="1022.2" y="172.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="16.0" y="191.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="47.2" y="191.0" fill="#6b7488" textLength="249.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">DEBUGASSERT(!strchr(fmt, '\n'));</text>
+<text x="1022.2" y="191.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="16.0" y="210.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="47.2" y="210.0" fill="#6b7488" textLength="374.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">if(data-&gt;set.verbose || data-&gt;set.errorbuffer) {</text>
+<text x="1022.2" y="210.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="16.0" y="229.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="62.8" y="229.0" fill="#6b7488" textLength="85.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">va_list ap;</text>
+<text x="1022.2" y="229.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="16.0" y="248.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="62.8" y="248.0" fill="#6b7488" textLength="85.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">size_t len;</text>
+<text x="1022.2" y="248.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="16.0" y="267.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="62.8" y="267.0" fill="#6b7488" textLength="249.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">char error[CURL_ERROR_SIZE + 2];</text>
+<text x="1022.2" y="267.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="16.0" y="286.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="47.2" y="286.0" fill="#4f5768" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">…</text>
+<text x="1022.2" y="286.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="16.0" y="305.0" fill="#232838" textLength="1014.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</text>
+<text x="16.0" y="324.0" fill="#56b6c2" font-weight="700" textLength="93.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">◀ REACHED BY</text>
+<text x="507.4" y="324.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="515.2" y="324.0" fill="#4f5768" textLength="46.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">USES ▶</text>
+<text x="31.6" y="343.0" fill="#6b7488" textLength="62.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp · 29</text>
+<text x="507.4" y="343.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="530.8" y="343.0" fill="#6b7488" textLength="93.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_trc · 1</text>
+<text x="16.0" y="362.0" fill="#56b6c2" font-weight="700" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▌</text>
+<text x="31.6" y="362.0" fill="#c3cadb" textLength="156.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_port_open_socket</text>
+<text x="507.4" y="362.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="530.8" y="362.0" fill="#c3cadb" textLength="70.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">trc_write</text>
+<text x="31.6" y="381.0" fill="#c3cadb" textLength="171.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_done_check_partial</text>
+<text x="507.4" y="381.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="530.8" y="381.0" fill="#6b7488" textLength="70.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curlx · 1</text>
+<text x="31.6" y="400.0" fill="#c3cadb" textLength="62.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_quit</text>
+<text x="507.4" y="400.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="530.8" y="400.0" fill="#c3cadb" textLength="101.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curlx_strcopy</text>
+<text x="31.6" y="419.0" fill="#c3cadb" textLength="156.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_control_addr_dup</text>
+<text x="507.4" y="419.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="530.8" y="419.0" fill="#6b7488" textLength="85.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">mprintf · 1</text>
+<text x="31.6" y="438.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_user_resp</text>
+<text x="507.4" y="438.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="530.8" y="438.0" fill="#c3cadb" textLength="117.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">curl_mvsnprintf</text>
+<text x="31.6" y="457.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_pasv_resp</text>
+<text x="507.4" y="457.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="476.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_stor_resp</text>
+<text x="507.4" y="476.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="495.0" fill="#c3cadb" textLength="195.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_done_secondary_socket</text>
+<text x="507.4" y="495.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="514.0" fill="#c3cadb" textLength="156.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_port_bind_socket</text>
+<text x="507.4" y="514.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="533.0" fill="#c3cadb" textLength="124.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_epsv_disable</text>
+<text x="507.4" y="533.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="552.0" fill="#c3cadb" textLength="140.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_parse_url_path</text>
+<text x="507.4" y="552.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="571.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_size_resp</text>
+<text x="507.4" y="571.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="590.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_rest_resp</text>
+<text x="507.4" y="590.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="609.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_acct_resp</text>
+<text x="507.4" y="609.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="628.0" fill="#c3cadb" textLength="101.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_wait_resp</text>
+<text x="507.4" y="628.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="647.0" fill="#c3cadb" textLength="163.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_port_resolve_host</text>
+<text x="507.4" y="647.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="666.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_type_resp</text>
+<text x="507.4" y="666.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="685.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_port_resp</text>
+<text x="507.4" y="685.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="704.0" fill="#c3cadb" textLength="140.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_ul_setup</text>
+<text x="507.4" y="704.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="723.0" fill="#c3cadb" textLength="148.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_pp_statemachine</text>
+<text x="507.4" y="723.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="742.0" fill="#c3cadb" textLength="117.0" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_port_listen</text>
+<text x="507.4" y="742.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="761.0" fill="#c3cadb" textLength="171.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_done_control_reply</text>
+<text x="507.4" y="761.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="780.0" fill="#c3cadb" textLength="140.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_get_resp</text>
+<text x="507.4" y="780.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="799.0" fill="#c3cadb" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">ftp_state_retr</text>
+<text x="507.4" y="799.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+<text x="31.6" y="818.0" fill="#c3cadb" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve">getftpresponse</text>
+<text x="507.4" y="818.0" fill="#232838" textLength="7.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
+</svg>
