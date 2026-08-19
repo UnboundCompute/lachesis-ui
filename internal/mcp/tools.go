@@ -1,6 +1,10 @@
 package mcp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
 
 // Version is stamped into the client handshake and the --version flag.
 const Version = "0.1.0"
@@ -143,33 +147,38 @@ func (c *Client) OpenFolder(root string) ([]FolderEntry, error) {
 		return nil, err
 	}
 
-	rootID := "nav:folder:" + res.Manifest.Root
-	// Which folder node is the queried root? Prefer the CONTAINS parent.
-	childOf := map[string]bool{}
+	// The engine returns the entire subtree. Reduce it to the direct children
+	// of the requested folder; for the repository root, keep nodes with no
+	// folder parent. DECLARES edges are intentionally ignored here.
+	rootID := "nav:folder:" + strings.Trim(strings.ReplaceAll(root, "\\", "/"), "/")
+	parentOf := map[string]string{}
 	for _, e := range res.Edges {
 		if e.Kind == "CONTAINS" {
-			childOf[e.Target] = true
-			_ = rootID
+			parentOf[e.Target] = e.Source
 		}
 	}
 
 	var out []FolderEntry
 	for _, n := range res.Nodes {
+		parent, hasParent := parentOf[n.ID]
+		if root == "" {
+			if hasParent {
+				continue
+			}
+		} else if parent != rootID {
+			continue
+		}
 		switch n.Kind {
 		case "file":
 			out = append(out, FolderEntry{IsDir: false, Label: n.Label, Path: n.Properties.File})
 		case "folder":
-			// Skip the ancestor chain the graph includes (e.g. "lib" when we
-			// asked for "lib/vquic"); keep only immediate subfolders.
-			if n.Properties.Path != "" && n.Properties.Path != trimRoot(res.Manifest.Root) {
+			if n.Properties.Path != "" {
 				out = append(out, FolderEntry{IsDir: true, Label: n.Properties.Basename, Path: n.Properties.Path})
 			}
 		}
 	}
 	return out, nil
 }
-
-func trimRoot(root string) string { return root }
 
 // ---- open_file (L1 file graph: declarations) ------------------------------
 
@@ -178,8 +187,9 @@ type fileGraphNode struct {
 	Kind       string `json:"kind"` // function | method | type | import | ...
 	Label      string `json:"label"`
 	Properties struct {
-		File string `json:"file"`
-		Name string `json:"name"`
+		File      string `json:"file"`
+		Name      string `json:"name"`
+		Specifier string `json:"specifier"`
 	} `json:"properties"`
 	Location struct {
 		StartLine int `json:"start_line"`
@@ -200,16 +210,17 @@ type Decl struct {
 }
 
 // OpenFile returns the declaration outline for a repo-relative file path.
-func (c *Client) OpenFile(file string) ([]Decl, error) {
+func (c *Client) OpenFile(file string) ([]Decl, []string, error) {
 	raw, err := c.Call("open_file", map[string]any{"file": file})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var res fileGraphResult
 	if err := json.Unmarshal(raw, &res); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var out []Decl
+	var imports []string
 	for _, n := range res.Nodes {
 		switch n.Kind {
 		case "function", "method", "type", "struct", "class", "enum":
@@ -223,9 +234,13 @@ func (c *Client) OpenFile(file string) ([]Decl, error) {
 				Name:      name,
 				StartLine: n.Location.StartLine,
 			})
+		case "module", "file":
+			if n.Properties.Specifier != "" {
+				imports = append(imports, n.Properties.Specifier)
+			}
 		}
 	}
-	return out, nil
+	return out, imports, nil
 }
 
 // ---- read_body ------------------------------------------------------------
@@ -269,6 +284,77 @@ func (c *Client) ReadBody(name string, maxChars int) (Body, error) {
 		Source:    res.Source,
 		Truncated: res.Truncated,
 	}, nil
+}
+
+// NavigationFacts are the compact graph-backed counters shown beside a
+// neighborhood's source preview.
+type NavigationFacts struct {
+	Reaches  int
+	Guards   int
+	PointsTo int
+}
+
+// Facts derives the three counters used by the navigation design. A failure is
+// returned per fact so the UI can mark missing graph capability without hiding
+// the caller/callee neighborhood that did load successfully.
+func (c *Client) Facts(name string) (NavigationFacts, map[string]error) {
+	facts := NavigationFacts{}
+	errs := map[string]error{}
+
+	if raw, err := c.Call("flow", map[string]any{"seed": name, "limit": 200}); err != nil {
+		errs["reaches"] = err
+	} else {
+		var res struct {
+			Error    string `json:"error"`
+			Manifest struct {
+				Reached int `json:"reached"`
+			} `json:"manifest"`
+		}
+		if err := json.Unmarshal(raw, &res); err != nil {
+			errs["reaches"] = err
+		} else if res.Error != "" {
+			errs["reaches"] = fmt.Errorf("%s", res.Error)
+		} else {
+			facts.Reaches = res.Manifest.Reached
+		}
+	}
+
+	if raw, err := c.Call("guards", map[string]any{"fn": name}); err != nil {
+		errs["guards"] = err
+	} else {
+		var res struct {
+			Error string `json:"error"`
+			Guard struct {
+				Conditions    int `json:"conditions"`
+				ShortCircuits int `json:"short_circuits"`
+				Throws        int `json:"throws"`
+			} `json:"guard_signal"`
+		}
+		if err := json.Unmarshal(raw, &res); err != nil {
+			errs["guards"] = err
+		} else if res.Error != "" {
+			errs["guards"] = fmt.Errorf("%s", res.Error)
+		} else {
+			facts.Guards = res.Guard.Conditions + res.Guard.ShortCircuits + res.Guard.Throws
+		}
+	}
+
+	if raw, err := c.Call("points_to", map[string]any{"value": name}); err != nil {
+		errs["points-to"] = err
+	} else {
+		var res struct {
+			Error string            `json:"error"`
+			Nodes []json.RawMessage `json:"nodes"`
+		}
+		if err := json.Unmarshal(raw, &res); err != nil {
+			errs["points-to"] = err
+		} else if res.Error != "" {
+			errs["points-to"] = fmt.Errorf("%s", res.Error)
+		} else if len(res.Nodes) > 0 {
+			facts.PointsTo = len(res.Nodes) - 1
+		}
+	}
+	return facts, errs
 }
 
 // ---- search ---------------------------------------------------------------

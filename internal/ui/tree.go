@@ -30,17 +30,25 @@ type treeNode struct {
 // file-manager "cd into a folder" list, the whole tree stays on screen and
 // folders expand in place — matching the design's collapsible outline.
 type treeModel struct {
-	root      string // absolute source root
+	root      string // graph path prefix; empty means repository root
 	cwd       string // enclosing folder of the selection, for the breadcrumb
 	rootNodes []*treeNode
 	flat      []*treeNode // visible rows, recomputed on every expand/collapse
 	selNode   *treeNode
 	off       int // scroll offset into flat
 
-	outlineFile string
-	decls       []mcp.Decl
-	outlineNote string
-	loadedOnce  bool
+	outlineFile   string
+	decls         []mcp.Decl
+	imports       []string
+	outlineNote   string
+	loadedOnce    bool
+	requestedPath string
+	pane          int // 0 = source tree, 1 = selected file's symbol outline
+	declSel       int
+	source        string
+	sourceErr     error
+	sourceMode    bool
+	sourceOff     int
 }
 
 func newTree() treeModel { return treeModel{} }
@@ -50,22 +58,25 @@ func (m *treeModel) loaded() bool { return m.loadedOnce }
 // open roots the tree at the repo root and loads its immediate children. The
 // path argument is accepted for symmetry with the navigation message but the
 // tree always roots at the repo root — nesting, not re-rooting, is how you move.
-func (m *treeModel) open(a *App, _ string) tea.Cmd {
-	if a.root == "" {
+func (m *treeModel) open(a *App, requestedPath string) tea.Cmd {
+	if !a.ready {
 		return nil // overview hasn't resolved the root yet; a later press retries
 	}
-	m.root = a.root
-	m.cwd = a.root
+	m.root = ""
+	m.cwd = ""
 	m.rootNodes = nil
 	m.flat = nil
 	m.selNode = nil
 	m.off = 0
-	m.outlineFile, m.decls, m.outlineNote = "", nil, ""
+	m.outlineFile, m.decls, m.imports, m.outlineNote = "", nil, nil, ""
+	m.requestedPath = requestedPath
+	m.pane, m.declSel = 0, 0
+	m.source, m.sourceErr, m.sourceMode, m.sourceOff = "", nil, false, 0
 	m.loadedOnce = true
-	return loadFolderCmd(a.client, a.root)
+	return loadFolderCmd(a.client, m.root)
 }
 
-func (m *treeModel) onFolder(msg folderLoadedMsg) {
+func (m *treeModel) onFolder(msg folderLoadedMsg) string {
 	kids := m.buildNodes(msg.entries)
 	if msg.path == m.root {
 		for _, n := range kids {
@@ -77,12 +88,16 @@ func (m *treeModel) onFolder(msg folderLoadedMsg) {
 		if m.selNode == nil && len(m.flat) > 0 {
 			m.selNode = m.flat[0]
 		}
+		if next := m.advanceRequested(); next != "" {
+			m.syncCwd()
+			return next
+		}
 		m.syncCwd()
-		return
+		return ""
 	}
 	node := m.findByPath(m.rootNodes, msg.path)
 	if node == nil {
-		return // children arrived for a node we no longer hold
+		return "" // children arrived for a node we no longer hold
 	}
 	for _, n := range kids {
 		n.depth = node.depth + 1
@@ -93,7 +108,46 @@ func (m *treeModel) onFolder(msg folderLoadedMsg) {
 	node.loading = false
 	node.expanded = true
 	m.rebuildFlat()
+	if next := m.advanceRequested(); next != "" {
+		m.syncCwd()
+		return next
+	}
 	m.syncCwd()
+	return ""
+}
+
+// advanceRequested walks toward a subsystem selected on Overview, expanding
+// each ancestor until the exact nested directory is visible and selected.
+func (m *treeModel) advanceRequested() string {
+	if m.requestedPath == "" {
+		return ""
+	}
+	if exact := m.findByPath(m.rootNodes, m.requestedPath); exact != nil {
+		m.selNode = exact
+		if exact.entry.IsDir && !exact.loaded && !exact.loading {
+			exact.loading = true
+			return exact.entry.Path
+		}
+		m.requestedPath = ""
+		return ""
+	}
+	var best *treeNode
+	for _, n := range m.flat {
+		if !n.entry.IsDir || n.loading || n.loaded {
+			continue
+		}
+		if strings.HasPrefix(m.requestedPath, strings.TrimSuffix(n.entry.Path, "/")+"/") {
+			if best == nil || len(n.entry.Path) > len(best.entry.Path) {
+				best = n
+			}
+		}
+	}
+	if best != nil {
+		m.selNode = best
+		best.loading = true
+		return best.entry.Path
+	}
+	return ""
 }
 
 func (m *treeModel) onOutline(msg outlineLoadedMsg) {
@@ -102,19 +156,65 @@ func (m *treeModel) onOutline(msg outlineLoadedMsg) {
 	}
 	m.outlineFile = msg.file
 	m.decls = msg.decls
+	m.imports = msg.imports
 	m.outlineNote = msg.note
+	m.declSel = 0
+}
+
+func (m *treeModel) onSource(msg sourceLoadedMsg) {
+	if msg.file != m.currentFilePath() {
+		return
+	}
+	m.source, m.sourceErr = msg.text, msg.err
+	m.sourceOff = 0
 }
 
 func (m *treeModel) update(a *App, msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
+	case "b":
+		if m.currentFilePath() != "" {
+			m.sourceMode = !m.sourceMode
+			m.pane = 1
+		}
+		return nil
+	case "tab":
+		if m.currentFilePath() != "" && len(m.decls) > 0 {
+			m.pane = 1 - m.pane
+		}
+		return nil
 	case "up", "k":
+		if m.sourceMode {
+			if m.sourceOff > 0 {
+				m.sourceOff--
+			}
+			return nil
+		}
+		if m.pane == 1 {
+			if m.declSel > 0 {
+				m.declSel--
+			}
+			return nil
+		}
 		return m.move(a, -1)
 	case "down", "j":
+		if m.sourceMode {
+			m.sourceOff++
+			return nil
+		}
+		if m.pane == 1 {
+			if m.declSel+1 < len(m.decls) {
+				m.declSel++
+			}
+			return nil
+		}
 		return m.move(a, +1)
 	case "right", "l":
 		// Expand a folder in place; on a file, nothing (its outline is already shown).
 		if n := m.selNode; n != nil && n.entry.IsDir {
 			return m.expand(a, n)
+		}
+		if m.currentFilePath() != "" && len(m.decls) > 0 {
+			m.pane = 1
 		}
 		return nil
 	case "enter":
@@ -131,13 +231,21 @@ func (m *treeModel) update(a *App, msg tea.KeyMsg) tea.Cmd {
 			}
 			return m.expand(a, n)
 		}
-		// On a file: jump into its first symbol's neighborhood.
+		// On a file: jump into the highlighted symbol's neighborhood.
 		if len(m.decls) > 0 && m.outlineFile == n.entry.Path {
-			name := m.decls[0].Name
+			i := m.declSel
+			if i < 0 || i >= len(m.decls) {
+				i = 0
+			}
+			name := m.decls[i].Name
 			return func() tea.Msg { return gotoNeighborhoodMsg{name: name} }
 		}
 		return nil
 	case "left", "h":
+		if m.pane == 1 {
+			m.pane = 0
+			return nil
+		}
 		return m.collapseOrParent(a)
 	}
 	return nil
@@ -160,6 +268,9 @@ func (m *treeModel) move(a *App, delta int) tea.Cmd {
 		j = len(m.flat) - 1
 	}
 	m.selNode = m.flat[j]
+	m.pane = 0
+	m.sourceMode = false
+	m.sourceOff = 0
 	m.syncCwd()
 	return m.maybeLoadOutline(a)
 }
@@ -205,7 +316,7 @@ func (m *treeModel) maybeLoadOutline(a *App) tea.Cmd {
 	if fp == "" || fp == m.outlineFile {
 		return nil
 	}
-	return loadOutlineCmd(a.client, fp)
+	return tea.Batch(loadOutlineCmd(a.client, fp), loadSourceCmd(a.root, fp))
 }
 
 func (m *treeModel) currentFilePath() string {
@@ -278,20 +389,23 @@ func (m *treeModel) selIndex() int {
 }
 
 func (m *treeModel) view(a *App, h int) string {
-	leftW := 44
-	rightW := a.width - leftW - 3
+	leftW := a.width / 3
+	if leftW < 30 {
+		leftW = 30
+	}
+	rightW := a.width - leftW - 1
 	if rightW < 20 {
 		rightW = 20
 	}
 	left := m.viewTreePane(leftW, h)
 	right := m.viewOutlinePane(a, rightW, h)
-	sep := lipgloss.NewStyle().Foreground(colBorder).Render(strings.Repeat("│\n", h))
+	sep := lipgloss.NewStyle().Foreground(colRule).Render(strings.TrimSuffix(strings.Repeat("│\n", h), "\n"))
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, sep, right)
 }
 
 func (m *treeModel) viewTreePane(w, h int) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, stColHead.Render("SOURCE TREE")+stDim.Render("  "+relPath(m.root, m.cwd)))
+	fmt.Fprintln(&b, stColHead.Render("SOURCE TREE"))
 	rows := h - 2
 	m.clampScroll(rows)
 	if len(m.flat) == 0 {
@@ -299,7 +413,7 @@ func (m *treeModel) viewTreePane(w, h int) string {
 	}
 	for i := m.off; i < len(m.flat) && i < m.off+rows; i++ {
 		n := m.flat[i]
-		selected := n == m.selNode
+		selected := n == m.selNode && m.pane == 0
 		indent := strings.Repeat("  ", n.depth)
 		var icon, name, badge string
 		if n.entry.IsDir {
@@ -325,7 +439,7 @@ func (m *treeModel) viewTreePane(w, h int) string {
 		}
 		fmt.Fprintln(&b, selRule(selected)+indent+icon+name+badge)
 	}
-	return lipgloss.NewStyle().Width(w).Render(b.String())
+	return lipgloss.NewStyle().Width(w).Padding(0, 1).Render(b.String())
 }
 
 func (m *treeModel) viewOutlinePane(a *App, w, h int) string {
@@ -335,7 +449,10 @@ func (m *treeModel) viewOutlinePane(a *App, w, h int) string {
 		fmt.Fprintln(&b, stDim.Render("a folder — ")+stFainter.Render("→ expand, ← collapse"))
 		fmt.Fprintln(&b)
 		fmt.Fprintln(&b, stFainter.Render("select a file to see the symbols it defines"))
-		return lipgloss.NewStyle().Width(w).Render(b.String())
+		return lipgloss.NewStyle().Width(w).Padding(0, 1).Render(b.String())
+	}
+	if m.sourceMode {
+		return m.viewSourcePane(fp, w, h)
 	}
 	fmt.Fprintln(&b, stBright.Render(path.Base(fp))+"  "+stDim.Render(relPath(m.root, fp)))
 	fmt.Fprintln(&b)
@@ -348,14 +465,55 @@ func (m *treeModel) viewOutlinePane(a *App, w, h int) string {
 		fmt.Fprintln(&b, stFainter.Render(wrap(note, w-2)))
 		return lipgloss.NewStyle().Width(w).Render(b.String())
 	}
-	for _, d := range m.decls {
+	rows := min(10, max(3, h-9))
+	off := 0
+	if m.declSel >= rows {
+		off = m.declSel - rows + 1
+	}
+	for i := off; i < len(m.decls) && i < off+rows; i++ {
+		d := m.decls[i]
 		kind := stMag.Render(padRight(shortKind(d.Kind), 3))
-		fmt.Fprintln(&b, "  "+kind+" "+stFg.Render(padRight(d.Name, 28))+
-			stDim.Render(fmt.Sprintf(":%d", d.StartLine)))
+		selected := m.pane == 1 && i == m.declSel
+		name := stFg.Render(padRight(clip(d.Name, 28), 28))
+		if selected {
+			name = stBright.Render(padRight(clip(d.Name, 28), 28))
+		}
+		fmt.Fprintln(&b, selRule(selected)+kind+" "+name+stDim.Render(fmt.Sprintf(":%d", d.StartLine)))
+	}
+	if len(m.decls) > rows {
+		fmt.Fprintln(&b, stFainter.Render(fmt.Sprintf("  %d symbols · scroll for more", len(m.decls))))
 	}
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, stFainter.Render("<enter> neighborhood of first symbol"))
-	return lipgloss.NewStyle().Width(w).Render(b.String())
+	if len(m.imports) > 0 {
+		imports := strings.Join(m.imports, " · ")
+		fmt.Fprintln(&b, stPanel.Width(max(10, w-6)).Render(stDim.Render("imports from ")+stFg.Render(clip(imports, w-20))))
+	}
+	fmt.Fprintln(&b, stFainter.Render("graph limitation: file line totals are unavailable"))
+	fmt.Fprintln(&b, stFainter.Render("<tab/→> choose symbol  <enter> neighborhood"))
+	return lipgloss.NewStyle().Width(w).Padding(0, 1).Render(b.String())
+}
+
+func (m *treeModel) viewSourcePane(fp string, w, h int) string {
+	var b strings.Builder
+	fmt.Fprintln(&b, stBright.Render(path.Base(fp))+"  "+stDim.Render(relPath(m.root, fp)))
+	fmt.Fprintln(&b, stColHead.Render("FULL SOURCE")+stDim.Render("  — local checkout"))
+	if m.sourceErr != nil && m.source == "" {
+		fmt.Fprintln(&b, stAmber.Render("source unavailable: ")+stFainter.Render("the graph has no whole-file source endpoint and the local file was not found"))
+		return lipgloss.NewStyle().Width(w).Padding(0, 1).Render(b.String())
+	}
+	lines := strings.Split(m.source, "\n")
+	rows := max(1, h-4)
+	if m.sourceOff > len(lines)-rows {
+		m.sourceOff = max(0, len(lines)-rows)
+	}
+	for i := m.sourceOff; i < len(lines) && i < m.sourceOff+rows; i++ {
+		line := clip(lines[i], w-9)
+		fmt.Fprintln(&b, stFainter.Render(fmt.Sprintf("%4d ", i+1))+stFg.Render(line))
+	}
+	if len(lines) > rows {
+		fmt.Fprintln(&b, stFainter.Render(fmt.Sprintf("  %d lines · ↑↓ scroll · b back to outline", len(lines))))
+	}
+	return lipgloss.NewStyle().Width(w).Padding(0, 1).Render(b.String())
 }
 
 func (m *treeModel) clampScroll(rows int) {

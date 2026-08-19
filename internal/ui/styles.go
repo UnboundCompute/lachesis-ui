@@ -17,8 +17,11 @@ var (
 	colFainter = lipgloss.Color("#4f5768")
 
 	colBorder = lipgloss.Color("#232838")
+	colRule   = lipgloss.Color("#1b2030")
+	colApp    = lipgloss.Color("#0b0d13")
 	colPanel  = lipgloss.Color("#0e1119")
 	colSelBg  = lipgloss.Color("#141a26")
+	colFocus  = lipgloss.Color("#0a0c11")
 )
 
 var (
@@ -53,8 +56,12 @@ var (
 	// The bordered focus/peek panel.
 	stPanel = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(colBorder).
+		BorderForeground(colRule).
 		Padding(0, 1)
+
+	stApp = lipgloss.NewStyle().
+		Foreground(colFg).
+		Background(colApp)
 
 	// Status bar.
 	stStatusBar = lipgloss.NewStyle().

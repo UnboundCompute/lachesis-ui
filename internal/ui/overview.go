@@ -2,10 +2,13 @@ package ui
 
 import (
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/UnboundCompute/lachesis-ui/internal/mcp"
 	"github.com/UnboundCompute/lachesis-ui/internal/subsystem"
@@ -54,8 +57,15 @@ func (m *overviewModel) onLoaded(msg overviewLoadedMsg) {
 	counts := map[string]int{}
 	dirFor := map[string]string{}
 	for _, h := range msg.hubs {
-		lbl := subsystem.Of(relPath(msg.root, h.File))
+		rel := relPath(msg.root, h.File)
+		lbl := subsystem.Of(rel)
 		counts[lbl]++
+		if _, ok := dirFor[lbl]; !ok {
+			dirFor[lbl] = path.Dir(rel)
+			if dirFor[lbl] == "." {
+				dirFor[lbl] = ""
+			}
+		}
 	}
 	// Prefer directory paths we actually saw under root for opening the tree.
 	for _, d := range msg.dirs {
@@ -80,8 +90,8 @@ func (m *overviewModel) onLoaded(msg overviewLoadedMsg) {
 		}
 		return m.subs[i].label < m.subs[j].label
 	})
-	if len(m.subs) > 8 {
-		m.subs = m.subs[:8]
+	if len(m.subs) > 4 {
+		m.subs = m.subs[:4]
 	}
 
 	// Entry points: nodes the graph flags as reachable from outside.
@@ -146,42 +156,94 @@ func (m *overviewModel) update(a *App, msg tea.KeyMsg) tea.Cmd {
 
 func (m *overviewModel) view(a *App, h int) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, stFg.Render("a code-property-graph over ")+stBright.Render(a.graph)+
-		stDim.Render(" — organized the way a developer reads it, not as a raw graph"))
-	fmt.Fprintln(&b)
+	contentW := a.width - 4
+	if contentW < 40 {
+		contentW = 40
+	}
 
-	// SUBSYSTEMS
-	fmt.Fprintln(&b, stColHead.Render("SUBSYSTEMS")+stDim.Render("  — what lives where (ranked by how much of the spine sits inside)"))
-	for i, s := range m.subs {
-		selected := m.rows[m.sel].kind == rowSub && m.rowIndexOfSub(i) == m.sel
-		name := stBright.Render(padRight(s.label, 16))
-		count := stDim.Render(fmt.Sprintf("%2d hubs", s.hubCount))
-		gloss := ""
-		if s.gloss != "" {
-			gloss = stDim.Render(" · " + s.gloss)
+	// SUBSYSTEMS — two columns of bordered cards, matching the map layout.
+	fmt.Fprintln(&b, stColHead.Render("SUBSYSTEMS — what lives where"))
+	cardW := (contentW - 2) / 2
+	for i := 0; i < len(m.subs); i += 2 {
+		left := m.subsystemCard(i, cardW)
+		right := ""
+		if i+1 < len(m.subs) {
+			right = m.subsystemCard(i+1, cardW)
 		}
-		fmt.Fprintln(&b, selRule(selected)+name+" "+count+gloss)
+		fmt.Fprintln(&b, lipgloss.JoinHorizontal(lipgloss.Top, left, "  ", right))
+	}
+	if len(m.subs) == 0 {
+		fmt.Fprintln(&b, stFainter.Render("no subsystem data in this graph"))
+	}
+	fmt.Fprintln(&b, stFainter.Render("graph limitation: per-subsystem file/function totals are unavailable"))
+	fmt.Fprintln(&b)
+
+	// ENTRY POINTS — graph-flagged roots rendered as compact pills.
+	fmt.Fprintln(&b, stColHead.Render("ENTRY POINTS — how execution gets in"))
+	if len(m.entries) == 0 {
+		fmt.Fprintln(&b, stFainter.Render("graph has no exported, dispatch-target, or callback flags"))
+	} else {
+		for i := 0; i < len(m.entries); i += 3 {
+			var line strings.Builder
+			fmt.Fprint(&line, stDim.Render("graph roots  "))
+			for j := i; j < len(m.entries) && j < i+3; j++ {
+				e := m.entries[j]
+				pill := lipgloss.NewStyle().Foreground(colBlue).Padding(0, 1).Render(e.Name)
+				fmt.Fprint(&line, pill+" ")
+			}
+			fmt.Fprintln(&b, line.String())
+		}
 	}
 	fmt.Fprintln(&b)
 
-	// ENTRY POINTS
-	fmt.Fprintln(&b, stColHead.Render("ENTRY POINTS")+stDim.Render("  — how execution gets in"))
-	for _, e := range m.entries {
-		flags := stMag.Render(strings.Join(e.Flags, " · "))
-		fmt.Fprintln(&b, "  "+stFg.Render(padRight(e.Name, 26))+" "+
-			stBlue.Render(padRight(relHandle(m.root, e.File, e.Line), 30))+" "+flags)
-	}
-	fmt.Fprintln(&b)
-
-	// START HERE (spine)
-	fmt.Fprintln(&b, stGreenB.Render("start here")+stDim.Render(" — the spine, highest-degree first"))
-	for i, hnode := range m.spine {
+	// Hubs provides ranked landmarks, but not an ordered execution path. Keep
+	// that graph limitation visible rather than drawing false call arrows.
+	fmt.Fprintln(&b, stGreenB.Render("start here")+stDim.Render(" — highest-degree landmarks"))
+	var landmarks strings.Builder
+	for i, node := range m.spine {
 		selected := m.rowIndexOfHub(i) == m.sel
-		deg := stDim.Render(fmt.Sprintf("deg %-4d", hnode.Degree))
-		fmt.Fprintln(&b, selRule(selected)+stCyan.Render(padRight(hnode.Name, 26))+" "+deg+" "+
-			stFainter.Render(relHandle(m.root, hnode.File, hnode.Line)))
+		label := stCyan.Render(node.Name)
+		if selected {
+			label = stSelected.Render(node.Name)
+		}
+		if i > 0 {
+			fmt.Fprint(&landmarks, stFainter.Render("  ·  "))
+		}
+		fmt.Fprint(&landmarks, label)
 	}
-	return b.String()
+	fmt.Fprintln(&b, wrapANSI(landmarks.String(), contentW))
+	fmt.Fprintln(&b, stFainter.Render("graph limitation: hubs does not provide an ordered execution spine"))
+
+	return lipgloss.NewStyle().Padding(1, 2).Width(a.width).Height(h).Render(b.String())
+}
+
+func (m *overviewModel) subsystemCard(i, w int) string {
+	s := m.subs[i]
+	selected := m.rowIndexOfSub(i) == m.sel
+	location := s.dir
+	if location != "" {
+		location += "/"
+	}
+	title := stBright.Render(clip(strings.TrimSpace(s.label+" "+location), max(8, w-18)))
+	title += "  " + stDim.Render(fmt.Sprintf("%d hubs", s.hubCount))
+	gloss := s.gloss
+	if gloss == "" {
+		gloss = "graph-ranked subsystem"
+	}
+	style := lipgloss.NewStyle().Width(w).Height(2).Border(lipgloss.RoundedBorder()).BorderForeground(colRule).Padding(0, 1)
+	if selected {
+		style = style.BorderLeftForeground(colCyan)
+	}
+	return style.Render(title + "\n" + stDim.Render(clip(gloss, w-4)))
+}
+
+// wrapANSI is intentionally conservative: Lip Gloss measures styled strings,
+// so it wraps only at landmark separators while preserving escape sequences.
+func wrapANSI(s string, w int) string {
+	if lipgloss.Width(s) <= w {
+		return s
+	}
+	return ansi.Truncate(s, w, "…")
 }
 
 func (m *overviewModel) rowIndexOfSub(i int) int { return i }

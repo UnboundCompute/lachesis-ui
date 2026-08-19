@@ -165,6 +165,9 @@ func normalize(file string) string {
 	// marker if present, else the cleaned path's tail is still grouped sanely
 	// by its own dirs.
 	p = path.Clean(p)
+	if p == "." {
+		return ""
+	}
 	p = strings.TrimPrefix(p, "/")
 	return p
 }

@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -34,18 +36,27 @@ type folderLoadedMsg struct {
 }
 
 type outlineLoadedMsg struct {
-	file  string
-	decls []mcp.Decl
-	note  string // set when no symbol index is available for this file
+	file    string
+	decls   []mcp.Decl
+	imports []string
+	note    string // set when no symbol index is available for this file
+}
+
+type sourceLoadedMsg struct {
+	file string
+	text string
+	err  error
 }
 
 type neighborhoodLoadedMsg struct {
-	name    string
-	root    string // absolute source root, so files can be shown/grouped relative
-	callers []mcp.Symbol
-	callees []mcp.Symbol
-	body    mcp.Body
-	hasBody bool
+	name       string
+	root       string // absolute source root, so files can be shown/grouped relative
+	callers    []mcp.Symbol
+	callees    []mcp.Symbol
+	body       mcp.Body
+	hasBody    bool
+	facts      mcp.NavigationFacts
+	factErrors map[string]error
 }
 
 type searchResultsMsg struct {
@@ -62,22 +73,25 @@ func loadOverviewCmd(c *mcp.Client) tea.Cmd {
 		if err != nil {
 			return errMsg{err}
 		}
-		root := commonDir(hubs)
+		// open_folder with an empty root means all application files. Its direct
+		// children are the actual repository-level folders/files, which is the
+		// root the navigation design expects even when every hub happens to live
+		// under one subdirectory.
+		displayRoot := commonAbsoluteDir(hubs)
+		folderRoot := ""
 		var dirs []mcp.FolderEntry
 		var files int
-		if root != "" {
-			entries, err := c.OpenFolder(root)
-			if err == nil {
-				for _, e := range entries {
-					if e.IsDir {
-						dirs = append(dirs, e)
-					} else {
-						files++
-					}
+		entries, folderErr := c.OpenFolder(folderRoot)
+		if folderErr == nil {
+			for _, e := range entries {
+				if e.IsDir {
+					dirs = append(dirs, e)
+				} else {
+					files++
 				}
 			}
 		}
-		return overviewLoadedMsg{root: root, hubs: hubs, dirs: dirs, files: files}
+		return overviewLoadedMsg{root: displayRoot, hubs: hubs, dirs: dirs, files: files}
 	}
 }
 
@@ -93,7 +107,7 @@ func loadFolderCmd(c *mcp.Client, p string) tea.Cmd {
 
 func loadOutlineCmd(c *mcp.Client, file string) tea.Cmd {
 	return func() tea.Msg {
-		decls, err := c.OpenFile(file)
+		decls, imports, err := c.OpenFile(file)
 		if err != nil {
 			return errMsg{err}
 		}
@@ -101,7 +115,33 @@ func loadOutlineCmd(c *mcp.Client, file string) tea.Cmd {
 		if len(decls) == 0 {
 			note = "this file declares no functions, methods, or types — it may hold only macros, data, or comments"
 		}
-		return outlineLoadedMsg{file: file, decls: decls, note: note}
+		return outlineLoadedMsg{file: file, decls: decls, imports: imports, note: note}
+	}
+}
+
+// loadSourceCmd is deliberately a best-effort companion to open_file. The
+// graph protocol exposes declarations and function bodies, not whole-file
+// text, so use the source checkout when its path is still available locally.
+func loadSourceCmd(root, file string) tea.Cmd {
+	return func() tea.Msg {
+		candidates := []string{}
+		if filepath.IsAbs(file) {
+			candidates = append(candidates, file)
+		} else {
+			if root != "" {
+				candidates = append(candidates, filepath.Join(root, filepath.FromSlash(file)))
+			}
+			candidates = append(candidates, filepath.FromSlash(file))
+		}
+		var last error
+		for _, candidate := range candidates {
+			data, err := os.ReadFile(candidate)
+			if err == nil {
+				return sourceLoadedMsg{file: file, text: string(data)}
+			}
+			last = err
+		}
+		return sourceLoadedMsg{file: file, err: last}
 	}
 }
 
@@ -115,10 +155,15 @@ func loadNeighborhoodCmd(c *mcp.Client, name, root string) tea.Cmd {
 		if err != nil {
 			return errMsg{err}
 		}
-		body, err := c.ReadBody(name, 1600)
+		// The Neighborhood preview can be compact, but full-body mode must have
+		// the complete function available for scrolling. The engine still guards
+		// pathological inputs with its own response limits and marks truncation.
+		body, err := c.ReadBody(name, 1<<20)
 		hasBody := err == nil && strings.TrimSpace(body.Source) != ""
+		facts, factErrors := c.Facts(name)
 		return neighborhoodLoadedMsg{
 			name: name, root: root, callers: callers, callees: callees, body: body, hasBody: hasBody,
+			facts: facts, factErrors: factErrors,
 		}
 	}
 }
@@ -153,6 +198,22 @@ func commonDir(hubs []mcp.Hub) string {
 		}
 	}
 	return prefix
+}
+
+// commonAbsoluteDir is display-only normalization for graphs whose symbol
+// handles mix absolute and repository-relative paths. Folder navigation still
+// queries the graph at its repository root.
+func commonAbsoluteDir(hubs []mcp.Hub) string {
+	var absolute []mcp.Hub
+	for _, h := range hubs {
+		if path.IsAbs(h.File) {
+			absolute = append(absolute, h)
+		}
+	}
+	if len(absolute) == 0 {
+		return ""
+	}
+	return commonDir(absolute)
 }
 
 func sharedPrefix(a, b string) string {

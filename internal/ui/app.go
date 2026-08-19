@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/UnboundCompute/lachesis-ui/internal/mcp"
 )
@@ -110,6 +111,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.view = viewNeighborhood
 		a.neighInit = true
 		a.err = nil
+		a.neigh.pushHistory(msg.name)
+		a.neigh.beginLoad(msg.name)
 		return a, loadNeighborhoodCmd(a.client, msg.name, a.root)
 
 	// ---- data arrivals: route to the owning screen --------------------
@@ -124,10 +127,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 	case folderLoadedMsg:
-		a.tree.onFolder(msg)
-		return a, nil
+		if next := a.tree.onFolder(msg); next != "" {
+			return a, loadFolderCmd(a.client, next)
+		}
+		return a, a.tree.maybeLoadOutline(&a)
 	case outlineLoadedMsg:
 		a.tree.onOutline(msg)
+		return a, nil
+	case sourceLoadedMsg:
+		a.tree.onSource(msg)
 		return a, nil
 	case neighborhoodLoadedMsg:
 		a.neigh.onLoaded(msg)
@@ -202,6 +210,12 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.view = viewNeighborhood
 		}
 		return a, nil
+	case "esc":
+		if a.view != viewOverview {
+			a.view = viewOverview
+			a.err = nil
+		}
+		return a, nil
 	}
 
 	if !a.ready {
@@ -253,45 +267,72 @@ func (a App) View() string {
 	if a.searching {
 		out = a.overlaySearch(out)
 	}
-	return out
+	return stApp.Width(a.width).Height(a.height).Render(out)
 }
 
 func (a App) renderHeader() string {
 	chip := stModeChip.Render("NAVIGATE")
-	var crumb string
+	var left, right string
 	switch a.view {
 	case viewOverview:
-		crumb = stCyanB.Render("Overview")
+		left = chip + "  " + stCyanB.Render("Overview") + "  " +
+			stFg.Render("a code-property-graph, organized the way a developer reads it")
+		right = stDim.Render(a.graph)
 	case viewTree:
-		crumb = stDim.Render("Overview ") + stFainter.Render("/ ") + stCyanB.Render("tree") +
-			breadcrumbTail(a.tree.cwd, a.root)
+		left = chip + "  " + stDim.Render("Overview") + " " + stFainter.Render("/") + " " + stCyanB.Render("tree")
+		right = stFainter.Render("</> filter files")
 	case viewNeighborhood:
-		crumb = stDim.Render("Overview ") + stFainter.Render("/ ") + stCyanB.Render(a.neigh.name)
+		left = chip + "  " + stDim.Render("Overview") + " " + stFainter.Render("/") + " " + stCyanB.Render(a.neigh.name)
+		if a.neigh.hasBody {
+			left += "  " + stBlue.Render(relHandle(a.root, a.neigh.body.File, a.neigh.body.StartLine))
+		}
+		right = stDim.Render("in ") + stFg.Render(fmt.Sprintf("%d", len(a.neigh.callers))) +
+			stDim.Render(" · out ") + stFg.Render(fmt.Sprintf("%d", len(a.neigh.callees))) +
+			"  " + stFainter.Render("<[> back  <]> fwd")
 	}
-	left := chip + "  " + crumb
-	right := stDim.Render(a.graph)
+	left = "  " + left
+	right += "  "
+	availableLeft := a.width - lipgloss.Width(right) - 1
+	if availableLeft < 1 {
+		availableLeft = 1
+	}
+	left = ansi.Truncate(left, availableLeft, "…")
 	gap := a.width - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 1 {
 		gap = 1
 	}
 	line := left + strings.Repeat(" ", gap) + right
-	rule := stFainter.Render(strings.Repeat("─", a.width))
-	return line + "\n" + rule
+	rule := lipgloss.NewStyle().Foreground(colRule).Render(strings.Repeat("─", a.width))
+	return lipgloss.NewStyle().Height(2).Render(line + "\n" + rule)
 }
 
 func (a App) renderStatus() string {
 	var hints string
 	switch a.view {
 	case viewOverview:
-		hints = key("↑↓", "move") + key("enter", "open") + key("t", "tree") + key("/", "search")
+		hints = key("enter", "open subsystem") + key("t", "source tree") + key("/", "search")
 	case viewTree:
-		hints = key("↑↓", "move") + key("→", "expand") + key("←", "collapse") + key("enter", "open symbol") + key("/", "search")
+		hints = key("↑↓", "move/scroll") + key("→", "expand/outline") + key("b", "full source") + key("enter", "neighborhood of symbol")
 	case viewNeighborhood:
-		hints = key("↑↓", "move") + key("enter", "re-center") + key("tab", "switch pane") + key("t", "tree")
+		hints = key("enter", "re-center") + key("b", "full body/preview") + key("↑↓", "scroll body") + key("tab", "switch pane") + key("[ ]", "history")
 	}
-	mode := stStatusMode.Render(" NAVIGATE ")
-	quit := key("q", "quit")
+	label := "NAVIGATE"
+	if a.view == viewTree {
+		label = "TREE"
+	} else if a.view == viewNeighborhood {
+		label = "NEIGHBORHOOD"
+	}
+	mode := stStatusMode.Render(" " + label + " ")
+	quit := stDim.Render("<esc> overview ")
+	if a.view == viewOverview {
+		quit = key("q", "quit")
+	}
 	line := mode + " " + hints
+	availableLine := a.width - lipgloss.Width(quit) - 1
+	if availableLine < 1 {
+		availableLine = 1
+	}
+	line = ansi.Truncate(line, availableLine, "…")
 	gap := a.width - lipgloss.Width(line) - lipgloss.Width(quit) - 1
 	if gap < 1 {
 		gap = 1

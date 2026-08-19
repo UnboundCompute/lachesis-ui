@@ -14,21 +14,48 @@ import (
 // neighModel is a symbol's neighborhood, grouped the way a developer reads it:
 // who reaches it and what it uses, bucketed by subsystem — never a raw dump.
 type neighModel struct {
-	name    string
-	root    string
-	callers []mcp.Symbol
-	callees []mcp.Symbol
-	body    mcp.Body
-	hasBody bool
+	name       string
+	root       string
+	callers    []mcp.Symbol
+	callees    []mcp.Symbol
+	body       mcp.Body
+	hasBody    bool
+	facts      mcp.NavigationFacts
+	factErrors map[string]error
 
 	callerGroups []subsystem.Bucket[mcp.Symbol]
 	calleeGroups []subsystem.Bucket[mcp.Symbol]
 
-	pane int // 0 = reached-by, 1 = uses
-	sel  [2]int
+	pane      int // 0 = reached-by, 1 = uses
+	sel       [2]int
+	history   []string
+	historyAt int
+	fullBody  bool
+	bodyOff   int
+	loading   bool
 }
 
-func newNeigh() neighModel { return neighModel{} }
+func newNeigh() neighModel { return neighModel{historyAt: -1} }
+
+func (m *neighModel) pushHistory(name string) {
+	if name == "" || (m.historyAt >= 0 && m.historyAt < len(m.history) && m.history[m.historyAt] == name) {
+		return
+	}
+	if m.historyAt+1 < len(m.history) {
+		m.history = m.history[:m.historyAt+1]
+	}
+	m.history = append(m.history, name)
+	m.historyAt = len(m.history) - 1
+}
+
+func (m *neighModel) beginLoad(name string) {
+	m.name = name
+	m.callers, m.callees = nil, nil
+	m.callerGroups, m.calleeGroups = nil, nil
+	m.body, m.hasBody = mcp.Body{}, false
+	m.facts, m.factErrors = mcp.NavigationFacts{}, nil
+	m.loading = true
+}
 
 func (m *neighModel) onLoaded(msg neighborhoodLoadedMsg) {
 	m.name = msg.name
@@ -37,11 +64,16 @@ func (m *neighModel) onLoaded(msg neighborhoodLoadedMsg) {
 	m.callees = msg.callees
 	m.body = msg.body
 	m.hasBody = msg.hasBody
+	m.facts = msg.facts
+	m.factErrors = msg.factErrors
 	key := func(s mcp.Symbol) string { return relPath(msg.root, s.File) }
 	m.callerGroups = subsystem.GroupByModule(msg.callers, key)
 	m.calleeGroups = subsystem.GroupByModule(msg.callees, key)
 	m.pane = 0
 	m.sel = [2]int{0, 0}
+	m.fullBody = false
+	m.bodyOff = 0
+	m.loading = false
 }
 
 func (m *neighModel) update(a *App, msg tea.KeyMsg) tea.Cmd {
@@ -54,18 +86,45 @@ func (m *neighModel) update(a *App, msg tea.KeyMsg) tea.Cmd {
 	case "right", "l":
 		m.pane = 1
 	case "up", "k":
+		if m.fullBody && m.hasBody {
+			if m.bodyOff > 0 {
+				m.bodyOff--
+			}
+			return nil
+		}
 		if m.sel[m.pane] > 0 {
 			m.sel[m.pane]--
 		}
 	case "down", "j":
+		if m.fullBody && m.hasBody {
+			m.bodyOff++
+			return nil
+		}
 		if m.sel[m.pane] < m.flatCount(m.pane)-1 {
 			m.sel[m.pane]++
 		}
 	case "enter":
 		if sym, ok := m.selected(); ok {
 			name := sym.Name
+			return func() tea.Msg { return gotoNeighborhoodMsg{name: name} }
+		}
+	case "[":
+		if m.historyAt > 0 {
+			m.historyAt--
+			name := m.history[m.historyAt]
+			m.beginLoad(name)
 			return loadNeighborhoodCmd(a.client, name, a.root)
 		}
+	case "]":
+		if m.historyAt+1 < len(m.history) {
+			m.historyAt++
+			name := m.history[m.historyAt]
+			m.beginLoad(name)
+			return loadNeighborhoodCmd(a.client, name, a.root)
+		}
+	case "b":
+		m.fullBody = !m.fullBody
+		m.bodyOff = 0
 	}
 	return nil
 }
@@ -95,48 +154,101 @@ func (m *neighModel) flatCount(pane int) int { return len(m.flatten(pane)) }
 
 func (m *neighModel) view(a *App, h int) string {
 	m.root = a.root
-	var b strings.Builder
-
-	// Focus header + body peek.
-	fmt.Fprintln(&b, stBright.Render(m.name)+"  "+
-		stDim.Render(fmt.Sprintf("reached by %d · uses %d", len(m.callers), len(m.callees))))
-	peek := m.viewBody(a.width - 2)
-	fmt.Fprintln(&b, stPanel.Width(a.width-2).Render(peek))
-
-	// Two grouped panes.
-	usedH := lipgloss.Height(b.String())
-	paneH := h - usedH - 1
-	if paneH < 3 {
-		paneH = 3
+	leftW := (a.width - 2) * 30 / 100
+	centerW := (a.width - 2) * 40 / 100
+	rightW := a.width - leftW - centerW - 2
+	if leftW < 22 {
+		leftW = 22
 	}
-	colW := (a.width - 3) / 2
-	if colW < 20 {
-		colW = 20
+	if centerW < 28 {
+		centerW = 28
 	}
-	left := m.viewGroupPane("◀ REACHED BY", m.callerGroups, 0, colW, paneH)
-	right := m.viewGroupPane("USES ▶", m.calleeGroups, 1, colW, paneH)
-	sep := lipgloss.NewStyle().Foreground(colBorder).Render(strings.Repeat("│\n", paneH))
-	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, left, sep, right))
-	return b.String()
+	if rightW < 22 {
+		rightW = 22
+	}
+	left := m.viewGroupPane("◀ REACHED BY", m.callerGroups, 0, leftW, h)
+	focus := m.viewFocus(centerW, h)
+	right := m.viewGroupPane("USES ▶", m.calleeGroups, 1, rightW, h)
+	sep := lipgloss.NewStyle().Foreground(colRule).Render(strings.TrimSuffix(strings.Repeat("│\n", h), "\n"))
+	return lipgloss.JoinHorizontal(lipgloss.Top, left, sep, focus, sep, right)
 }
 
-func (m *neighModel) viewBody(w int) string {
-	if !m.hasBody {
-		return stFainter.Render("no source available for this symbol")
-	}
-	lines := strings.Split(m.body.Source, "\n")
-	limit := 7
+func (m *neighModel) viewFocus(w, h int) string {
 	var b strings.Builder
-	loc := fmt.Sprintf("%s:%d–%d", relPath(m.root, m.body.File), m.body.StartLine, m.body.EndLine)
-	fmt.Fprintln(&b, stFainter.Render(loc))
-	for i, ln := range lines {
-		if i >= limit {
-			fmt.Fprint(&b, stFainter.Render("  …"))
-			break
-		}
-		fmt.Fprintln(&b, stDim.Render(clip(ln, w-2)))
+	fmt.Fprintln(&b, stCyanB.Render("● FOCUS"))
+	fmt.Fprintln(&b, stBright.Render(clip(m.name, w-4)))
+	if m.loading {
+		fmt.Fprintln(&b, stFainter.Render("loading neighborhood…"))
+		return lipgloss.NewStyle().Width(w).Height(h).Background(colFocus).Padding(0, 1).Render(b.String())
 	}
-	return b.String()
+	if !m.hasBody {
+		fmt.Fprintln(&b, stFainter.Render("no source available for this symbol"))
+		return lipgloss.NewStyle().Width(w).Height(h).Background(colFocus).Padding(0, 1).Render(b.String())
+	}
+	loc := fmt.Sprintf("%s:%d–%d", relPath(m.root, m.body.File), m.body.StartLine, m.body.EndLine)
+	fmt.Fprintln(&b, stDim.Render(loc))
+	fmt.Fprintln(&b)
+	lines := strings.Split(m.body.Source, "\n")
+	limit := h - 11
+	if limit < 3 {
+		limit = 3
+	}
+	if !m.fullBody && limit > 7 {
+		limit = 7
+	}
+	if m.bodyOff > len(lines)-limit {
+		m.bodyOff = max(0, len(lines)-limit)
+	}
+	var code strings.Builder
+	start := 0
+	if m.fullBody {
+		start = m.bodyOff
+	}
+	end := min(len(lines), start+limit)
+	for i := start; i < end; i++ {
+		ln := lines[i]
+		lineNo := stFainter.Render(fmt.Sprintf("%-4d", m.body.StartLine+i))
+		fmt.Fprintln(&code, lineNo+stFg.Render(clip(ln, w-13)))
+	}
+	if end < len(lines) {
+		fmt.Fprintln(&code, stFainter.Render(fmt.Sprintf("… lines %d–%d of %d · ↑↓ scroll", start+1, end, len(lines))))
+	}
+	if m.body.Truncated {
+		fmt.Fprintln(&code, stAmber.Render("graph body response was truncated; source checkout may contain the complete function"))
+	}
+	fmt.Fprintln(&b, stPanel.Width(max(12, w-4)).Render(strings.TrimSuffix(code.String(), "\n")))
+	fmt.Fprintln(&b)
+	reaches := m.factBadge("reaches from here", "reaches", m.facts.Reaches)
+	guards := m.factBadge("guards", "guards", m.facts.Guards)
+	points := m.factBadge("points-to", "points-to", m.facts.PointsTo)
+	factsLine := reaches + "  " + guards + "  " + points
+	if lipgloss.Width(factsLine) <= w-4 {
+		fmt.Fprintln(&b, factsLine)
+	} else {
+		fmt.Fprintln(&b, reaches)
+		fmt.Fprintln(&b, guards+"  "+points)
+	}
+	if missing := m.missingFacts(); missing != "" {
+		fmt.Fprintln(&b, stFainter.Render(clip("graph data unavailable: "+missing, w-4)))
+	}
+	return lipgloss.NewStyle().Width(w).Height(h).Background(colFocus).Padding(0, 1).Render(b.String())
+}
+
+func (m *neighModel) factBadge(label, key string, value int) string {
+	if _, missing := m.factErrors[key]; missing {
+		return stDim.Render(label+" ") + stAmber.Render("n/a")
+	}
+	return stDim.Render(label+" ") + stFg.Render(fmt.Sprintf("%d", value))
+}
+
+func (m *neighModel) missingFacts() string {
+	var missing []string
+	for _, key := range []string{"reaches", "guards", "points-to"} {
+		if _, ok := m.factErrors[key]; ok {
+			missing = append(missing, key)
+		}
+	}
+	return strings.Join(missing, ", ")
 }
 
 func (m *neighModel) viewGroupPane(title string, groups []subsystem.Bucket[mcp.Symbol], pane, w, h int) string {
@@ -148,7 +260,7 @@ func (m *neighModel) viewGroupPane(title string, groups []subsystem.Bucket[mcp.S
 	}
 	fmt.Fprintln(&b, head)
 
-	rows := h - 1
+	rows := h - 2
 	// Build flat display with group headers; track selectable symbol index.
 	type line struct {
 		text       string
@@ -159,18 +271,41 @@ func (m *neighModel) viewGroupPane(title string, groups []subsystem.Bucket[mcp.S
 	symIdx := 0
 	for _, g := range groups {
 		label := g.Label
-		if gloss := subsystem.Describe(label); gloss != "" {
-			label = label + " · " + gloss
+		gloss := subsystem.Describe(label)
+		if gloss == "" {
+			gloss = label
 		}
-		disp = append(disp, line{text: stDim.Render(fmt.Sprintf("%s · %d", label, len(g.Items)))})
-		for _, s := range g.Items {
+		disp = append(disp, line{text: stDim.Render(fmt.Sprintf("from %s · %d", gloss, len(g.Items)))})
+		shown := g.Items
+		if len(shown) > 4 {
+			shown = shown[:4]
+		}
+		for _, s := range shown {
 			via := ""
 			if !strings.HasPrefix(s.Via, "direct") {
 				via = stFainter.Render("  ⟿")
 			}
-			row := stFg.Render(padRight(clip(s.Name, w-8), w-8)) + via
+			location := ""
+			if s.File != "" {
+				location = stBlue.Render(clip(relHandle(m.root, s.File, s.Line), 14))
+			}
+			nameW := w - lipgloss.Width(location) - lipgloss.Width(via) - 5
+			row := stFg.Render(padRight(clip(s.Name, nameW), nameW)) + " " + location + via
 			disp = append(disp, line{text: row, selectable: true, symIndex: symIdx})
 			symIdx++
+		}
+		if len(g.Items) > len(shown) {
+			disp = append(disp, line{text: stCyan.Render(fmt.Sprintf("show all %d →", len(g.Items)))})
+			for _, s := range g.Items[len(shown):] {
+				location := ""
+				if s.File != "" {
+					location = stBlue.Render(clip(relHandle(m.root, s.File, s.Line), 14))
+				}
+				nameW := w - lipgloss.Width(location) - 5
+				row := stFg.Render(padRight(clip(s.Name, nameW), nameW)) + " " + location
+				disp = append(disp, line{text: row, selectable: true, symIndex: symIdx})
+				symIdx++
+			}
 		}
 	}
 	if len(disp) == 0 {
@@ -199,7 +334,7 @@ func (m *neighModel) viewGroupPane(title string, groups []subsystem.Bucket[mcp.S
 			fmt.Fprintln(&b, "  "+l.text)
 		}
 	}
-	return lipgloss.NewStyle().Width(w).Render(b.String())
+	return lipgloss.NewStyle().Width(w).Height(h).Padding(0, 1).Render(b.String())
 }
 
 func clip(s string, w int) string {
