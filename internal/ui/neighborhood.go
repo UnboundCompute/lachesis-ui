@@ -166,17 +166,18 @@ func (m *neighModel) view(a *App, h int) string {
 	if rightW < 22 {
 		rightW = 22
 	}
-	left := m.viewGroupPane("◀ REACHED BY", m.callerGroups, 0, leftW, h)
+	left := m.viewGroupPane("◀ CALLED FROM", m.callerGroups, 0, leftW, h)
 	focus := m.viewFocus(centerW, h)
-	right := m.viewGroupPane("USES ▶", m.calleeGroups, 1, rightW, h)
+	right := m.viewGroupPane("CALLS ▶", m.calleeGroups, 1, rightW, h)
 	sep := lipgloss.NewStyle().Foreground(colRule).Render(strings.TrimSuffix(strings.Repeat("│\n", h), "\n"))
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, sep, focus, sep, right)
 }
 
 func (m *neighModel) viewFocus(w, h int) string {
 	var b strings.Builder
-	fmt.Fprintln(&b, stCyanB.Render("● FOCUS"))
+	fmt.Fprintln(&b, stCyanB.Render("● SELECTED SYMBOL"))
 	fmt.Fprintln(&b, stBright.Render(clip(m.name, w-4)))
+	fmt.Fprintln(&b, stDim.Render("What calls it, and what it calls:"))
 	if m.loading {
 		fmt.Fprintln(&b, stFainter.Render("loading neighborhood…"))
 		return lipgloss.NewStyle().Width(w).Height(h).Background(colFocus).Padding(0, 1).Render(b.String())
@@ -275,7 +276,11 @@ func (m *neighModel) viewGroupPane(title string, groups []subsystem.Bucket[mcp.S
 		if gloss == "" {
 			gloss = label
 		}
-		disp = append(disp, line{text: stDim.Render(fmt.Sprintf("from %s · %d", gloss, len(g.Items)))})
+		prefix := "called from"
+		if pane == 1 {
+			prefix = "calls into"
+		}
+		disp = append(disp, line{text: stDim.Render(fmt.Sprintf("%s %s · %d", prefix, gloss, len(g.Items)))})
 		shown := g.Items
 		if len(shown) > 4 {
 			shown = shown[:4]

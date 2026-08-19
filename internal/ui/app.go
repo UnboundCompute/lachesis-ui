@@ -45,6 +45,7 @@ type App struct {
 	searching bool
 	search    textinput.Model
 	results   searchModel
+	help      bool
 }
 
 // New builds the root model around a connected client.
@@ -186,8 +187,17 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.search, cmd = a.search.Update(msg)
 		return a, cmd
 	}
+	if a.help {
+		if msg.String() == "?" || msg.String() == "esc" {
+			a.help = false
+		}
+		return a, nil
+	}
 
 	switch msg.String() {
+	case "?":
+		a.help = true
+		return a, nil
 	case "ctrl+c", "q":
 		return a, tea.Quit
 	case "/":
@@ -267,6 +277,9 @@ func (a App) View() string {
 	if a.searching {
 		out = a.overlaySearch(out)
 	}
+	if a.help {
+		out = a.overlayHelp(out)
+	}
 	return stApp.Width(a.width).Height(a.height).Render(out)
 }
 
@@ -286,8 +299,8 @@ func (a App) renderHeader() string {
 		if a.neigh.hasBody {
 			left += "  " + stBlue.Render(relHandle(a.root, a.neigh.body.File, a.neigh.body.StartLine))
 		}
-		right = stDim.Render("in ") + stFg.Render(fmt.Sprintf("%d", len(a.neigh.callers))) +
-			stDim.Render(" · out ") + stFg.Render(fmt.Sprintf("%d", len(a.neigh.callees))) +
+		right = stDim.Render("called from ") + stFg.Render(fmt.Sprintf("%d", len(a.neigh.callers))) +
+			stDim.Render(" · calls ") + stFg.Render(fmt.Sprintf("%d", len(a.neigh.callees))) +
 			"  " + stFainter.Render("<[> back  <]> fwd")
 	}
 	left = "  " + left
@@ -310,22 +323,22 @@ func (a App) renderStatus() string {
 	var hints string
 	switch a.view {
 	case viewOverview:
-		hints = key("enter", "open subsystem") + key("t", "source tree") + key("/", "search")
+		hints = key("enter", "open area") + key("t", "files") + key("/", "find symbol")
 	case viewTree:
-		hints = key("↑↓", "move/scroll") + key("→", "expand/outline") + key("b", "full source") + key("enter", "neighborhood of symbol")
+		hints = key("↑↓", "move/scroll") + key("→", "expand/select symbol") + key("b", "full source") + key("enter", "see symbol map")
 	case viewNeighborhood:
-		hints = key("enter", "re-center") + key("b", "full body/preview") + key("↑↓", "scroll body") + key("tab", "switch pane") + key("[ ]", "history")
+		hints = key("enter", "open selected") + key("b", "full body/preview") + key("↑↓", "move/scroll") + key("tab", "switch side") + key("[ ]", "back/forward")
 	}
 	label := "NAVIGATE"
 	if a.view == viewTree {
 		label = "TREE"
 	} else if a.view == viewNeighborhood {
-		label = "NEIGHBORHOOD"
+		label = "SYMBOL MAP"
 	}
 	mode := stStatusMode.Render(" " + label + " ")
-	quit := stDim.Render("<esc> overview ")
+	quit := stDim.Render("<esc> overview  <?> help ")
 	if a.view == viewOverview {
-		quit = key("q", "quit")
+		quit = key("q", "quit") + key("?", "help")
 	}
 	line := mode + " " + hints
 	availableLine := a.width - lipgloss.Width(quit) - 1
@@ -361,6 +374,23 @@ func (a App) overlaySearch(base string) string {
 		lipgloss.WithWhitespaceChars(" "))
 	_ = base
 	return overlay
+}
+
+func (a App) overlayHelp(base string) string {
+	var b strings.Builder
+	fmt.Fprintln(&b, stBright.Render("How to explore this code"))
+	fmt.Fprintln(&b)
+	fmt.Fprintln(&b, stCyanB.Render("↑ ↓ / j k")+"  "+stFg.Render("move through the current list"))
+	fmt.Fprintln(&b, stCyanB.Render("enter")+"     "+stFg.Render("open the selected area, file, or symbol"))
+	fmt.Fprintln(&b, stCyanB.Render("tab")+"       "+stFg.Render("switch between the two side lists"))
+	fmt.Fprintln(&b, stCyanB.Render("b")+"         "+stFg.Render("toggle the full source/body view"))
+	fmt.Fprintln(&b, stCyanB.Render("t")+"         "+stFg.Render("open the source tree"))
+	fmt.Fprintln(&b, stCyanB.Render("/")+"         "+stFg.Render("find a symbol by name"))
+	fmt.Fprintln(&b, stCyanB.Render("esc")+"       "+stFg.Render("return to the overview"))
+	fmt.Fprintln(&b, stCyanB.Render("?")+"         "+stFg.Render("close this help"))
+	box := stPanel.Width(min(a.width-6, 72)).Render(b.String())
+	_ = base
+	return lipgloss.Place(a.width, a.height, lipgloss.Center, lipgloss.Center, box, lipgloss.WithWhitespaceChars(" "))
 }
 
 func keyDelta(s string) int {

@@ -162,7 +162,8 @@ func (m *overviewModel) view(a *App, h int) string {
 	}
 
 	// SUBSYSTEMS — two columns of bordered cards, matching the map layout.
-	fmt.Fprintln(&b, stColHead.Render("SUBSYSTEMS — what lives where"))
+	fmt.Fprintln(&b, stColHead.Render("AREAS — what lives where"))
+	fmt.Fprintln(&b, stDim.Render("Choose an area to see its files and symbols."))
 	cardW := (contentW - 2) / 2
 	for i := 0; i < len(m.subs); i += 2 {
 		left := m.subsystemCard(i, cardW)
@@ -179,7 +180,7 @@ func (m *overviewModel) view(a *App, h int) string {
 	fmt.Fprintln(&b)
 
 	// ENTRY POINTS — graph-flagged roots rendered as compact pills.
-	fmt.Fprintln(&b, stColHead.Render("ENTRY POINTS — how execution gets in"))
+	fmt.Fprintln(&b, stColHead.Render("STARTING POINTS — where execution enters"))
 	if len(m.entries) == 0 {
 		fmt.Fprintln(&b, stFainter.Render("graph has no exported, dispatch-target, or callback flags"))
 	} else {
@@ -198,7 +199,7 @@ func (m *overviewModel) view(a *App, h int) string {
 
 	// Hubs provides ranked landmarks, but not an ordered execution path. Keep
 	// that graph limitation visible rather than drawing false call arrows.
-	fmt.Fprintln(&b, stGreenB.Render("start here")+stDim.Render(" — highest-degree landmarks"))
+	fmt.Fprintln(&b, stGreenB.Render("GOOD PLACES TO START")+stDim.Render(" — highly connected symbols"))
 	var landmarks strings.Builder
 	for i, node := range m.spine {
 		selected := m.rowIndexOfHub(i) == m.sel

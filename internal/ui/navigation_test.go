@@ -31,7 +31,7 @@ func navigationFixture() App {
 
 func TestNavigationScreensMatchDesignedStructure(t *testing.T) {
 	a := navigationFixture()
-	assertFrame(t, a.View(), "SUBSYSTEMS — what lives where", "ENTRY POINTS — how execution gets in", "start here")
+	assertFrame(t, a.View(), "AREAS — what lives where", "STARTING POINTS — where execution enters", "GOOD PLACES TO START")
 
 	file := &treeNode{entry: mcp.FolderEntry{Label: "main.py", Path: "cli/main.py"}, depth: 1}
 	dir := &treeNode{entry: mcp.FolderEntry{IsDir: true, Label: "cli", Path: "cli"}, expanded: true, loaded: true, children: []*treeNode{file}}
@@ -39,13 +39,13 @@ func TestNavigationScreensMatchDesignedStructure(t *testing.T) {
 	a.view = viewTree
 	a.tree = treeModel{rootNodes: []*treeNode{dir}, flat: []*treeNode{dir, file}, selNode: file, outlineFile: file.entry.Path,
 		decls: []mcp.Decl{{Kind: "function", Name: "command_scan", StartLine: 62}}, imports: []string{"indexer", "planner"}, loadedOnce: true, pane: 1}
-	assertFrame(t, a.View(), "SOURCE TREE", "WHAT IT DEFINES", "imports from")
+	assertFrame(t, a.View(), "SOURCE TREE", "SYMBOLS IN THIS FILE", "imports from")
 
 	a.view = viewNeighborhood
 	a.neigh.onLoaded(neighborhoodLoadedMsg{name: "ensureGraph", callers: []mcp.Symbol{{Name: "main", File: "cli/main.py", Line: 62}},
 		callees: []mcp.Symbol{{Name: "load", File: "core/store.py", Line: 41}}, hasBody: true,
 		body: mcp.Body{File: "core/graph.py", StartLine: 41, EndLine: 44, Source: "def ensureGraph():\n    return load()"}})
-	assertFrame(t, a.View(), "◀ REACHED BY", "● FOCUS", "USES ▶")
+	assertFrame(t, a.View(), "◀ CALLED FROM", "● SELECTED SYMBOL", "CALLS ▶")
 }
 
 func TestNavigationFlowKeys(t *testing.T) {
@@ -89,6 +89,20 @@ func TestNeighborhoodFullBodyScrollsLongFunctions(t *testing.T) {
 	}
 	if !strings.Contains(ansi.Strip(a.neigh.view(&a, 20)), "scroll") {
 		t.Fatal("long full body did not show its scroll affordance")
+	}
+}
+
+func TestHelpOverlayIsDiscoverable(t *testing.T) {
+	a := navigationFixture()
+	model, _ := a.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	a = model.(App)
+	if !a.help || !strings.Contains(ansi.Strip(a.View()), "How to explore this code") {
+		t.Fatal("? did not open the help overlay")
+	}
+	model, _ = a.handleKey(tea.KeyMsg{Type: tea.KeyEsc})
+	a = model.(App)
+	if a.help {
+		t.Fatal("esc did not close the help overlay")
 	}
 }
 

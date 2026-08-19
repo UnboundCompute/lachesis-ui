@@ -446,9 +446,9 @@ func (m *treeModel) viewOutlinePane(a *App, w, h int) string {
 	var b strings.Builder
 	fp := m.currentFilePath()
 	if fp == "" {
-		fmt.Fprintln(&b, stDim.Render("a folder — ")+stFainter.Render("→ expand, ← collapse"))
+		fmt.Fprintln(&b, stDim.Render("This is a folder — ")+stFainter.Render("→ expand it"))
 		fmt.Fprintln(&b)
-		fmt.Fprintln(&b, stFainter.Render("select a file to see the symbols it defines"))
+		fmt.Fprintln(&b, stFainter.Render("Select a file to see its symbols."))
 		return lipgloss.NewStyle().Width(w).Padding(0, 1).Render(b.String())
 	}
 	if m.sourceMode {
@@ -456,7 +456,8 @@ func (m *treeModel) viewOutlinePane(a *App, w, h int) string {
 	}
 	fmt.Fprintln(&b, stBright.Render(path.Base(fp))+"  "+stDim.Render(relPath(m.root, fp)))
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, stColHead.Render("WHAT IT DEFINES")+stDim.Render("  — symbols, not lines"))
+	fmt.Fprintln(&b, stColHead.Render("SYMBOLS IN THIS FILE"))
+	fmt.Fprintln(&b, stDim.Render("Choose a symbol, then press enter to see its map."))
 	if len(m.decls) == 0 {
 		note := m.outlineNote
 		if note == "" {
