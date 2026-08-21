@@ -69,10 +69,15 @@ jobs:
       - name: Smoke-test native binary
         if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: |
+          set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
           name="lachesis-ui-${GITHUB_REF_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}"
           expected="lachesis-ui ${version}"
-          actual="$("dist/$name/lachesis-ui" --version)"
+          verify_dir="$(mktemp -d)"
+          trap 'rm -rf "$verify_dir"' EXIT
+          tar -xzf "dist/$name.tar.gz" -C "$verify_dir"
+          test -f "$verify_dir/$name/lachesis-ui"
+          actual="$("$verify_dir/$name/lachesis-ui" --version)"
           test "$actual" = "$expected" || {
             echo "version mismatch: got '$actual', want '$expected'" >&2
             exit 1

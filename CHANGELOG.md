@@ -20,7 +20,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ### Changed
 
 - Release verification now executes the native Linux binary and checks its stamped
-  version before uploading cross-platform archives.
+  version from the extracted archive before uploading cross-platform archives.
 
 - The stack installer now disables Git terminal prompts so unattended setup fails
   clearly when a checkout cannot authenticate or reach its repository.
