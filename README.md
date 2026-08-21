@@ -96,7 +96,7 @@ Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
 `python3` (3.10+), and Go 1.24.2+ to build the binary.
 
 To keep the stack outside your home directory (for example, on a CI volume), set
-`LACHESIS_HOME`; the generated graph helper uses the same root:
+`LACHESIS_HOME`; the generated graph helper and UI discovery use the same root:
 
 ```sh
 LACHESIS_HOME=/var/cache/lachesis ./scripts/install.sh
