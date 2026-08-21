@@ -55,8 +55,11 @@ jobs:
           mkdir -p dist
           go build -trimpath -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$version" -o "dist/$name/lachesis-ui" .
           cp README.md LICENSE "dist/$name/"
+          # Normalize tar metadata and the gzip header so the same tag rebuilds
+          # to byte-identical artifacts.
           tar -C dist --sort=name --mtime="@${SOURCE_DATE_EPOCH}" \
-            --owner=0 --group=0 --numeric-owner -czf "dist/$name.tar.gz" "$name"
+            --owner=0 --group=0 --numeric-owner -cf - "$name" \
+            | gzip -n > "dist/$name.tar.gz"
           (cd dist && sha256sum "$name.tar.gz") >> dist/SHA256SUMS
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4

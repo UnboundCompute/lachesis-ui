@@ -29,8 +29,8 @@ shasum -a 256 -c SHA256SUMS
 The workflow stamps each binary with the tag version; verify a downloaded binary with
 `./lachesis-ui --version` before promoting it.
 
-Archive ordering, timestamps, and ownership metadata are normalized from the tagged
-commit, so rebuilding the same tag produces identical archive bytes.
+Archive ordering, timestamps, ownership metadata, and the gzip header are normalized
+from the tagged commit, so rebuilding the same tag produces identical archive bytes.
 
 The workflow uploads artifacts but does not publish a GitHub release or modify a
 package registry. Promote the reviewed artifacts explicitly and retain the prior
