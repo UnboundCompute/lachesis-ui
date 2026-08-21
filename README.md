@@ -216,6 +216,11 @@ lachesis-ui [flags] [graph.kuzu]
 **Engine discovery** order: `$LACHESIS_PYTHON`, then `~/.lachesis/venv/bin/python`,
 then `python3` or `python` on PATH.
 
+Engine startup is bounded to five minutes by default while a large graph loads. Set
+`LACHESIS_UI_STARTUP_TIMEOUT` to a Go duration such as `10m` when a larger codebase
+needs more time; an expired startup terminates the child and reports an actionable
+error.
+
 ---
 
 ## Contributing

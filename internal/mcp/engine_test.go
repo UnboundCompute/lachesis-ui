@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestGraphsDirHonorsInstallRoot(t *testing.T) {
@@ -50,5 +51,16 @@ func TestListGraphsSkipsNonStoreArtifacts(t *testing.T) {
 	graphs := ListGraphs()
 	if len(graphs) != 1 || graphs[0].Name != "valid" {
 		t.Fatalf("ListGraphs() = %#v, want only valid.kuzu", graphs)
+	}
+}
+
+func TestStartupTimeoutIsConfigurable(t *testing.T) {
+	t.Setenv("LACHESIS_UI_STARTUP_TIMEOUT", "17s")
+	if got, want := startupTimeout(), 17*time.Second; got != want {
+		t.Fatalf("startupTimeout() = %s, want %s", got, want)
+	}
+	t.Setenv("LACHESIS_UI_STARTUP_TIMEOUT", "not-a-duration")
+	if got := startupTimeout(); got != defaultStartupTimeout {
+		t.Fatalf("invalid timeout = %s, want default %s", got, defaultStartupTimeout)
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -78,11 +79,34 @@ func Spawn(python, graphPath string) (*Client, error) {
 	}
 	go c.drainStderr(stderr)
 
-	if err := c.initialize(); err != nil {
+	timeout := startupTimeout()
+	ready := make(chan error, 1)
+	go func() { ready <- c.initialize() }()
+	select {
+	case err := <-ready:
+		if err == nil {
+			return c, nil
+		}
 		_ = c.Close()
 		return nil, err
+	case <-time.After(timeout):
+		_ = c.Close()
+		return nil, fmt.Errorf("engine initialization timed out after %s", timeout)
 	}
-	return c, nil
+}
+
+const defaultStartupTimeout = 5 * time.Minute
+
+func startupTimeout() time.Duration {
+	value := os.Getenv("LACHESIS_UI_STARTUP_TIMEOUT")
+	if value == "" {
+		return defaultStartupTimeout
+	}
+	timeout, err := time.ParseDuration(value)
+	if err != nil || timeout <= 0 {
+		return defaultStartupTimeout
+	}
+	return timeout
 }
 
 func (c *Client) initialize() error {
