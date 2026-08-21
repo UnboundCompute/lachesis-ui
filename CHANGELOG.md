@@ -29,6 +29,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - The generated `build-graph.sh` helper rejects path-like graph names so output
   cannot escape the configured graph directory.
 
+- The generated graph helper now reports a clear error for a missing source
+  directory before attempting to resolve it.
+
 - The Tree keys now match a nested tree: right expands a folder, left collapses
   it or jumps to its parent, and enter opens a folder or a symbol's
   neighborhood.

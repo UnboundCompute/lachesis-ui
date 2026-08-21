@@ -158,6 +158,10 @@ cat > "$LACHESIS_HOME/build-graph.sh" <<HELPER
 # Builds a lachesis graph and prints the store path.
 set -euo pipefail
 SOURCE_DIR="\${1:?usage: build-graph.sh <source_dir> [name]}"
+if [ ! -d "\$SOURCE_DIR" ]; then
+  echo "error: source directory does not exist: \$SOURCE_DIR" >&2
+  exit 2
+fi
 SOURCE_DIR="\$(cd "\$SOURCE_DIR" && pwd)"
 NAME="\${2:-\$(basename "\$SOURCE_DIR")}"
 case "\$NAME" in
