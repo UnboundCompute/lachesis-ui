@@ -25,6 +25,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - The stack installer now disables Git terminal prompts so unattended setup fails
   clearly when a checkout cannot authenticate or reach its repository.
 
+- The stack installer now applies Git low-speed and pip network bounds, so stalled
+  repository or dependency transfers fail clearly instead of hanging unattended.
+
 - UI MCP tool requests now have a two-minute default bound, configurable with
   `LACHESIS_UI_REQUEST_TIMEOUT`, and report recent engine diagnostics when a request
   times out instead of leaving the terminal waiting indefinitely.

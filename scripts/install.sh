@@ -34,6 +34,15 @@ set -euo pipefail
 # setup waiting for Git credentials; the public repositories below should fail fast
 # when the runner has no network or credentials rather than hanging indefinitely.
 export GIT_TERMINAL_PROMPT=0
+# Fail slow or stalled HTTPS transfers instead of leaving an unattended bootstrap
+# waiting forever. These are Git's documented low-speed guards and do not affect
+# local checkouts or SSH refs.
+export GIT_HTTP_LOW_SPEED_LIMIT="${GIT_HTTP_LOW_SPEED_LIMIT:-1000}"
+export GIT_HTTP_LOW_SPEED_TIME="${GIT_HTTP_LOW_SPEED_TIME:-60}"
+# Keep pip noninteractive and bound its index/download wait during the engine setup.
+export PIP_NO_INPUT=1
+export PIP_DISABLE_PIP_VERSION_CHECK=1
+export PIP_DEFAULT_TIMEOUT="${PIP_DEFAULT_TIMEOUT:-60}"
 
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   sed -n '2,/^set -euo pipefail$/p' "$0"
