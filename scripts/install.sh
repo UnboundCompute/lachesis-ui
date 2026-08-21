@@ -19,7 +19,8 @@
 #   ~/.lachesis/bin/lachesis-ui   the built UI binary
 #   ~/.lachesis/build-graph.sh    helper: build a graph from any source tree
 #
-# Re-running is safe: it updates existing checkouts instead of recloning.
+# Re-running is safe: it updates existing clean checkouts to the requested refs
+# instead of silently retaining an older branch or commit.
 #
 # Env overrides:
 #   LACHESIS_HOME   install root            (default: ~/.lachesis)
@@ -57,7 +58,13 @@ clone_or_update() {
   local url="$1" dir="$2" name="$3" ref="$4"
   if [ -d "$dir/.git" ]; then
     info "updating $name"
-    git -C "$dir" pull --ff-only --quiet || warn "$name: could not fast-forward (local changes?), leaving as is"
+    if ! git -C "$dir" diff --quiet || ! git -C "$dir" diff --cached --quiet; then
+      die "$name: local changes found; commit or remove them before changing refs"
+    fi
+    git -C "$dir" fetch --depth 1 --quiet origin "$ref" \
+      || die "$name: could not fetch ref '$ref'"
+    git -C "$dir" checkout --detach --quiet FETCH_HEAD \
+      || die "$name: could not check out ref '$ref'"
   else
     info "cloning $name"
     git clone --depth 1 --quiet "$url" "$dir" \
