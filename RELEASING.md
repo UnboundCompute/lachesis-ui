@@ -20,6 +20,12 @@ README and license, and writes `SHA256SUMS`. Downloaded archives must pass:
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
+On macOS, the equivalent verification command is:
+
+```bash
+shasum -a 256 -c SHA256SUMS
+```
+
 The workflow stamps each binary with the tag version; verify a downloaded binary with
 `./lachesis-ui --version` before promoting it.
 

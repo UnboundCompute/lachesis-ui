@@ -137,6 +137,8 @@ and verify its SHA-256 checksum before unpacking it:
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
+On macOS, use `shasum -a 256 -c SHA256SUMS` instead.
+
 A Homebrew tap is still planned.
 
 ---
