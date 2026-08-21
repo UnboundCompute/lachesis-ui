@@ -113,8 +113,11 @@ If you already have the engine installed (`~/.lachesis/venv`, or `lachesis` on
 your PATH), you only need the UI:
 
 ```sh
-go install github.com/UnboundCompute/lachesis-ui@latest
+go install github.com/UnboundCompute/lachesis-ui@v0.1.0
 ```
+
+Replace `v0.1.0` with the reviewed release tag you intend to deploy; avoid
+`@latest` in production automation.
 
 ### Not pip or npm
 
