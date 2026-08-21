@@ -38,6 +38,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - Engine startup recovery now points to the supported source-checkout install and
   labels the PyPI command as conditional until a release is published.
 
+- The binary-only install section now distinguishes the working source build from
+  the `go install` command reserved for a published UI tag.
+
 - UI startup diagnostics now use `python -m pip` in their engine-install hint,
   avoiding interpreter mismatches during recovery.
 

@@ -142,7 +142,13 @@ export PATH="$HOME/.lachesis/bin:$PATH"
 ### Just the binary
 
 If you already have the engine installed (`~/.lachesis/venv`, or `lachesis` on
-your PATH), you only need the UI:
+your PATH), you only need the UI. From this checkout, build it with:
+
+```sh
+go build -trimpath -o "$HOME/.lachesis/bin/lachesis-ui" .
+```
+
+For a tagged release published to the Go module proxy, use:
 
 ```sh
 go install github.com/UnboundCompute/lachesis-ui@v0.1.0
