@@ -98,9 +98,20 @@ mkdir -p "$SRC" "$BIN" "$GRAPHS"
 # the shared stack half-written. mkdir is atomic and available on macOS and Linux.
 INSTALL_LOCK="$LACHESIS_HOME/.install.lock"
 if ! mkdir "$INSTALL_LOCK" 2>/dev/null; then
-  die "another Lachesis installation is already running at $LACHESIS_HOME"
+  owner_pid=""
+  if [ -f "$INSTALL_LOCK/pid" ]; then
+    read -r owner_pid < "$INSTALL_LOCK/pid" || true
+  fi
+  if [ -n "$owner_pid" ] && ! kill -0 "$owner_pid" 2>/dev/null; then
+    rm -f "$INSTALL_LOCK/pid"
+    rmdir "$INSTALL_LOCK" 2>/dev/null || true
+  fi
+  if ! mkdir "$INSTALL_LOCK" 2>/dev/null; then
+    die "another Lachesis installation is already running at $LACHESIS_HOME"
+  fi
 fi
-trap 'rmdir "$INSTALL_LOCK" 2>/dev/null || true' EXIT
+printf '%s\n' "$$" > "$INSTALL_LOCK/pid"
+trap 'rm -f "$INSTALL_LOCK/pid"; rmdir "$INSTALL_LOCK" 2>/dev/null || true' EXIT
 
 # ---- 1 + 2. clone/update engine and catalog (side by side) ----------------
 clone_or_update() {
