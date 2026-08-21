@@ -64,6 +64,19 @@ info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m warn:\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
+validate_ref() {
+  local label="$1" ref="$2"
+  case "$ref" in
+    ""|[-]*|*[[:space:]]*)
+      die "$label must be a single Git ref (no leading '-' or whitespace)"
+      ;;
+  esac
+}
+
+validate_ref LACHESIS_REF "$LACHESIS_REF"
+validate_ref ATROPOS_REF "$ATROPOS_REF"
+validate_ref LACHESIS_UI_REF "$LACHESIS_UI_REF"
+
 need() { command -v "$1" >/dev/null 2>&1 || die "missing required tool: $1"; }
 
 # ---- preflight ------------------------------------------------------------
