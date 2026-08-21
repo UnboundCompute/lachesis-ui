@@ -35,6 +35,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - The install documentation now uses `python -m pip` so engine dependencies
   stay in the interpreter the UI discovers.
 
+- Engine startup recovery now points to the supported source-checkout install and
+  labels the PyPI command as conditional until a release is published.
+
 - UI startup diagnostics now use `python -m pip` in their engine-install hint,
   avoiding interpreter mismatches during recovery.
 
