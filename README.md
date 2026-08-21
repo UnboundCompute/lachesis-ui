@@ -118,7 +118,9 @@ go install github.com/UnboundCompute/lachesis-ui@latest
 
 `lachesis-ui` is a static Go binary, so it is **not** a pip or npm package. The
 engine it drives is Python (`pip install -e` from the checkout, which
-`install.sh` does for you). Prebuilt binaries and a Homebrew tap are planned.
+`install.sh` does for you). Tagged releases build Linux and macOS binaries for
+amd64 and arm64 in the `release binaries` workflow. Download the matching archive
+and verify its SHA-256 checksum; a Homebrew tap is still planned.
 
 ---
 

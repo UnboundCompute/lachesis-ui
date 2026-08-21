@@ -1,0 +1,49 @@
+name: release binaries
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.goos }}-${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+      - name: Build and package
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          name="lachesis-ui-${GITHUB_REF_NAME}-${GOOS}-${GOARCH}"
+          mkdir -p dist
+          go build -trimpath -ldflags='-s -w' -o "dist/$name/lachesis-ui" .
+          cp README.md LICENSE "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          sha256sum "dist/$name.tar.gz" >> dist/SHA256SUMS
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lachesis-ui-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/

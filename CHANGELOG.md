@@ -9,6 +9,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Added
 
+- Tagged releases now build checksummed Linux and macOS binaries for amd64 and arm64.
 - Nested, collapsible source tree on the Tree screen. Folders expand in place
   and load their children lazily, with child-count badges, so a large repo
   opens as a handful of top-level folders rather than a flat wall of files.
