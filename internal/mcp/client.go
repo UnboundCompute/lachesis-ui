@@ -54,6 +54,7 @@ type rpcError struct {
 // python is the interpreter that can import lachesis (see engine.Discover).
 func Spawn(python, graphPath string) (*Client, error) {
 	cmd := exec.Command(python, "-m", "lachesis.nav.mcp_server", graphPath)
+	configureProcess(cmd)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -318,7 +319,7 @@ func (c *Client) Close() error {
 	case err := <-done:
 		return err
 	case <-time.After(2 * time.Second):
-		_ = c.cmd.Process.Kill()
+		_ = killProcessTree(c.cmd)
 		return nil
 	}
 }

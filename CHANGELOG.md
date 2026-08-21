@@ -47,6 +47,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - The stack installer now warns when engine or catalog refs remain on mutable `main`,
   while preserving those defaults for development use.
 
+- UI engine shutdown now uses a dedicated POSIX process group, so startup or request
+  timeouts terminate compiler/helper children along with the MCP parent.
+
 - UI startup diagnostics now use `python -m pip` in their engine-install hint,
   avoiding interpreter mismatches during recovery.
 
