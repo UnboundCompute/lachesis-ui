@@ -111,6 +111,9 @@ if [ ! -x "$VENV/bin/python" ]; then
 fi
 info "installing the engine into the virtualenv"
 "$VENV/bin/python" -m pip install --quiet --upgrade pip
+info "vendoring the pinned TypeScript compiler"
+"$PYTHON" "$SRC/lachesis/tools/vendor_typescript.py"
+"$PYTHON" "$SRC/lachesis/tools/vendor_typescript.py" --check
 "$VENV/bin/python" -m pip install --quiet -e "$SRC/lachesis"
 
 # ---- 4. graph-build helper ------------------------------------------------
