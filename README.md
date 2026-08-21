@@ -117,12 +117,12 @@ LACHESIS_HOME=/var/cache/lachesis ./scripts/install.sh
 ```
 
 For reproducible deployments, pin the engine and catalog before installing (use
-reviewed tags or commit SHAs rather than mutable branches). Re-running the
+reviewed release tags rather than mutable branches). Re-running the
 installer applies those refs to existing clean checkouts and refuses to touch a
 checkout with local edits or untracked files:
 
 ```sh
-LACHESIS_REF=<lachesis-tag-or-sha> ATROPOS_REF=<atropos-tag-or-sha> ./scripts/install.sh
+LACHESIS_REF=<lachesis-release-tag> ATROPOS_REF=<atropos-release-tag> ./scripts/install.sh
 ```
 
 The installer pins its binary fallback to `v0.1.0`; set `LACHESIS_UI_REF` to a
