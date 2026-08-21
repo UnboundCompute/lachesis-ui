@@ -17,6 +17,7 @@ jobs:
   build:
     name: build and check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out
         uses: actions/checkout@v4

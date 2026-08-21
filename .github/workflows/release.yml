@@ -11,6 +11,7 @@ jobs:
   build:
     name: ${{ matrix.goos }}-${{ matrix.goarch }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
