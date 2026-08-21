@@ -22,6 +22,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - The install documentation now uses `python -m pip` so engine dependencies
   stay in the interpreter the UI discovers.
 
+- UI startup diagnostics now use `python -m pip` in their engine-install hint,
+  avoiding interpreter mismatches during recovery.
+
 - The installer rejects empty, option-like, or whitespace-containing engine,
   catalog, and UI refs before invoking Git.
 

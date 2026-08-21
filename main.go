@@ -51,7 +51,7 @@ func main() {
 	if err != nil {
 		fatal(fmt.Sprintf("could not start the engine: %v\n\n"+
 			"The UI needs the lachesis engine (Python). Install it, or point at it:\n"+
-			"  pip install lachesis-cpg   # or your project's install\n"+
+			"  python -m pip install lachesis-cpg   # or your project's install\n"+
 			"  lachesis-ui --python /path/to/python\n"+
 			"  LACHESIS_PYTHON=/path/to/python lachesis-ui", err))
 	}
