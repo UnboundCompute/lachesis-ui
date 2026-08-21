@@ -51,7 +51,7 @@ need() { command -v "$1" >/dev/null 2>&1 || die "missing required tool: $1"; }
 # ---- preflight ------------------------------------------------------------
 need git
 need "$PYTHON"
-command -v go >/dev/null 2>&1 || warn "go not found. Install Go 1.24+ to build the UI (a 'go install' fallback is tried only if you have go)"
+command -v go >/dev/null 2>&1 || warn "go not found. Install Go 1.24.2+ to build the UI (a 'go install' fallback is tried only if you have go)"
 
 mkdir -p "$SRC" "$BIN" "$GRAPHS"
 

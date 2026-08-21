@@ -19,7 +19,7 @@ about how that information is shown or navigated, it belongs here.
 
 ## Getting set up
 
-You need Go 1.24+ and, to run the UI against a real graph, the engine.
+You need Go 1.24.2+ and, to run the UI against a real graph, the engine.
 
 ```sh
 git clone https://github.com/UnboundCompute/lachesis-ui
