@@ -29,6 +29,10 @@ shasum -a 256 -c SHA256SUMS
 The workflow stamps each binary with the tag version; verify a downloaded binary with
 `./lachesis-ui --version` before promoting it.
 
+The release workflow performs that version smoke test automatically for the native
+Linux amd64 artifact; the other targets are cross-compiled and verified by their
+reproducible archive hashes.
+
 Archive ordering, timestamps, ownership metadata, and the gzip header are normalized
 from the tagged commit, so rebuilding the same tag produces identical archive bytes.
 

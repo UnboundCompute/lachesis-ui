@@ -66,6 +66,17 @@ jobs:
             | gzip -n > "dist/$name.tar.gz"
           sha256sum -c "/tmp/${name}.first.sha256"
           (cd dist && sha256sum "$name.tar.gz") >> dist/SHA256SUMS
+      - name: Smoke-test native binary
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          name="lachesis-ui-${GITHUB_REF_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          expected="lachesis-ui ${version}"
+          actual="$("dist/$name/lachesis-ui" --version)"
+          test "$actual" = "$expected" || {
+            echo "version mismatch: got '$actual', want '$expected'" >&2
+            exit 1
+          }
       - name: Upload binary artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
