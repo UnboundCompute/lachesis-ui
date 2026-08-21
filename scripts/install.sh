@@ -77,8 +77,8 @@ if sys.version_info < (3, 10):
         f"Python 3.10+ is required (found {sys.version_info.major}.{sys.version_info.minor})"
     )
 PY
-if command -v go >/dev/null 2>&1; then
-  "$PYTHON" - "$(go version)" <<'PY'
+need go
+"$PYTHON" - "$(go version)" <<'PY'
 import re
 import sys
 
@@ -91,9 +91,6 @@ if found < (1, 24, 2):
         f"Go 1.24.2+ is required (found {found[0]}.{found[1]}.{found[2]})"
     )
 PY
-else
-  warn "go not found. Install Go 1.24.2+ to build the UI (a 'go install' fallback is tried only if you have go)"
-fi
 
 mkdir -p "$SRC" "$BIN" "$GRAPHS"
 
@@ -153,18 +150,14 @@ chmod +x "$LACHESIS_HOME/build-graph.sh"
 
 # ---- 5. build the UI ------------------------------------------------------
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if command -v go >/dev/null 2>&1; then
-  if [ -f "$HERE/main.go" ]; then
-    info "building lachesis-ui from source checkout"
-    (cd "$HERE" && go build -trimpath \
-      -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$LACHESIS_UI_VERSION" \
-      -o "$BIN/lachesis-ui" .)
-  else
-    info "installing lachesis-ui via go install"
-    GOBIN="$BIN" go install "github.com/UnboundCompute/lachesis-ui@$LACHESIS_UI_REF"
-  fi
+if [ -f "$HERE/main.go" ]; then
+  info "building lachesis-ui from source checkout"
+  (cd "$HERE" && go build -trimpath \
+    -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$LACHESIS_UI_VERSION" \
+    -o "$BIN/lachesis-ui" .)
 else
-  warn "skipped building the UI (no go). Install Go and run: go build -o $BIN/lachesis-ui ."
+  info "installing lachesis-ui via go install"
+  GOBIN="$BIN" go install "github.com/UnboundCompute/lachesis-ui@$LACHESIS_UI_REF"
 fi
 
 # ---- done -----------------------------------------------------------------
