@@ -30,6 +30,11 @@
 #
 set -euo pipefail
 
+# The installer is intended for terminals and CI alike. Never leave an unattended
+# setup waiting for Git credentials; the public repositories below should fail fast
+# when the runner has no network or credentials rather than hanging indefinitely.
+export GIT_TERMINAL_PROMPT=0
+
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   sed -n '2,/^set -euo pipefail$/p' "$0"
   cat <<'USAGE'
