@@ -26,6 +26,7 @@
 #   LACHESIS_HOME   install root            (default: ~/.lachesis)
 #   PYTHON          python to build the venv (default: python3)
 #   LACHESIS_UI_REF release tag/commit for the go-install fallback (default: v0.1.0)
+#   LACHESIS_UI_VERSION version stamped into a source-built binary (default: 0.1.0)
 #
 set -euo pipefail
 
@@ -54,6 +55,7 @@ PYTHON="${PYTHON:-python3}"
 LACHESIS_REF="${LACHESIS_REF:-main}"
 ATROPOS_REF="${ATROPOS_REF:-main}"
 LACHESIS_UI_REF="${LACHESIS_UI_REF:-v0.1.0}"
+LACHESIS_UI_VERSION="${LACHESIS_UI_VERSION:-0.1.0}"
 
 LACHESIS_REPO="https://github.com/UnboundCompute/lachesis.git"
 ATROPOS_REPO="https://github.com/UnboundCompute/atropos.git"
@@ -154,7 +156,9 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if command -v go >/dev/null 2>&1; then
   if [ -f "$HERE/main.go" ]; then
     info "building lachesis-ui from source checkout"
-    (cd "$HERE" && go build -o "$BIN/lachesis-ui" .)
+    (cd "$HERE" && go build -trimpath \
+      -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$LACHESIS_UI_VERSION" \
+      -o "$BIN/lachesis-ui" .)
   else
     info "installing lachesis-ui via go install"
     GOBIN="$BIN" go install "github.com/UnboundCompute/lachesis-ui@$LACHESIS_UI_REF"

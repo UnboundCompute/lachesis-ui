@@ -114,6 +114,13 @@ LACHESIS_REF=<lachesis-tag-or-sha> ATROPOS_REF=<atropos-tag-or-sha> ./scripts/in
 The installer pins its binary fallback to `v0.1.0`; set `LACHESIS_UI_REF` to a
 reviewed tag or commit when selecting another UI release.
 
+When building from the checkout, set `LACHESIS_UI_VERSION` if the binary should report
+a version other than the default `0.1.0`:
+
+```sh
+LACHESIS_UI_VERSION=1.2.0 ./scripts/install.sh
+```
+
 Then put the binary on your PATH:
 
 ```sh
