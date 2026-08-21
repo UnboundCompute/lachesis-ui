@@ -51,6 +51,14 @@ need() { command -v "$1" >/dev/null 2>&1 || die "missing required tool: $1"; }
 # ---- preflight ------------------------------------------------------------
 need git
 need "$PYTHON"
+"$PYTHON" - <<'PY'
+import sys
+
+if sys.version_info < (3, 10):
+    raise SystemExit(
+        f"Python 3.10+ is required (found {sys.version_info.major}.{sys.version_info.minor})"
+    )
+PY
 command -v go >/dev/null 2>&1 || warn "go not found. Install Go 1.24.2+ to build the UI (a 'go install' fallback is tried only if you have go)"
 
 mkdir -p "$SRC" "$BIN" "$GRAPHS"
