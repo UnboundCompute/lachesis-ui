@@ -120,7 +120,13 @@ go install github.com/UnboundCompute/lachesis-ui@latest
 engine it drives is Python (`pip install -e` from the checkout, which
 `install.sh` does for you). Tagged releases build Linux and macOS binaries for
 amd64 and arm64 in the `release binaries` workflow. Download the matching archive
-and verify its SHA-256 checksum; a Homebrew tap is still planned.
+and verify its SHA-256 checksum before unpacking it:
+
+```sh
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+A Homebrew tap is still planned.
 
 ---
 
