@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -53,6 +54,7 @@ type rpcError struct {
 // python is the interpreter that can import lachesis (see engine.Discover).
 func Spawn(python, graphPath string) (*Client, error) {
 	cmd := exec.Command(python, "-m", "lachesis.nav.mcp_server", graphPath)
+	configureProcess(cmd)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -78,11 +80,53 @@ func Spawn(python, graphPath string) (*Client, error) {
 	}
 	go c.drainStderr(stderr)
 
-	if err := c.initialize(); err != nil {
+	timeout := startupTimeout()
+	ready := make(chan error, 1)
+	go func() { ready <- c.initialize() }()
+	select {
+	case err := <-ready:
+		if err == nil {
+			return c, nil
+		}
+		err = withEngineLogs(err, c.Logs())
 		_ = c.Close()
 		return nil, err
+	case <-time.After(timeout):
+		diagnostic := withEngineLogs(
+			fmt.Errorf("engine initialization timed out after %s", timeout),
+			c.Logs(),
+		)
+		_ = c.Close()
+		return nil, diagnostic
 	}
-	return c, nil
+}
+
+// withEngineLogs keeps startup failures actionable without putting stderr on the
+// MCP stdout channel. In particular, a wrong interpreter/cwd and an unreadable
+// graph otherwise look identical to a client as a silent process exit.
+func withEngineLogs(err error, logs []string) error {
+	if len(logs) == 0 {
+		return err
+	}
+	const maxLines = 20
+	if len(logs) > maxLines {
+		logs = logs[len(logs)-maxLines:]
+	}
+	return fmt.Errorf("%w\nengine stderr:\n%s", err, strings.Join(logs, "\n"))
+}
+
+const defaultStartupTimeout = 5 * time.Minute
+
+func startupTimeout() time.Duration {
+	value := os.Getenv("LACHESIS_UI_STARTUP_TIMEOUT")
+	if value == "" {
+		return defaultStartupTimeout
+	}
+	timeout, err := time.ParseDuration(value)
+	if err != nil || timeout <= 0 {
+		return defaultStartupTimeout
+	}
+	return timeout
 }
 
 func (c *Client) initialize() error {
@@ -117,10 +161,10 @@ func (c *Client) Call(tool string, args map[string]any) (json.RawMessage, error)
 	if _, ok := args["format"]; !ok {
 		args["format"] = "json"
 	}
-	raw, err := c.request("tools/call", map[string]any{
+	raw, err := c.requestBounded("tools/call", map[string]any{
 		"name":      tool,
 		"arguments": args,
-	})
+	}, tool)
 	if err != nil {
 		return nil, err
 	}
@@ -143,6 +187,49 @@ func (c *Client) Call(tool string, args map[string]any) (json.RawMessage, error)
 		return nil, fmt.Errorf("%s: %s", tool, strings.TrimPrefix(text, "error: "))
 	}
 	return json.RawMessage(text), nil
+}
+
+const defaultRequestTimeout = 2 * time.Minute
+
+func requestTimeout() time.Duration {
+	value := os.Getenv("LACHESIS_UI_REQUEST_TIMEOUT")
+	if value == "" {
+		return defaultRequestTimeout
+	}
+	timeout, err := time.ParseDuration(value)
+	if err != nil || timeout <= 0 {
+		return defaultRequestTimeout
+	}
+	return timeout
+}
+
+// requestBounded prevents a stalled engine query from leaving the terminal UI
+// permanently waiting. Once a request exceeds the bound, the engine is closed so
+// queued calls cannot continue against an unresponsive process; the stderr tail is
+// retained in the returned error for an actionable diagnosis.
+func (c *Client) requestBounded(method string, params any, label string) (json.RawMessage, error) {
+	result := make(chan struct {
+		raw json.RawMessage
+		err error
+	}, 1)
+	go func() {
+		raw, err := c.request(method, params)
+		result <- struct {
+			raw json.RawMessage
+			err error
+		}{raw: raw, err: err}
+	}()
+	timeout := requestTimeout()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case r := <-result:
+		return r.raw, r.err
+	case <-timer.C:
+		err := withEngineLogs(fmt.Errorf("%s timed out after %s", label, timeout), c.Logs())
+		_ = c.Close()
+		return nil, err
+	}
 }
 
 // request performs one synchronous JSON-RPC round trip.
@@ -171,7 +258,7 @@ func (c *Client) request(method string, params any) (json.RawMessage, error) {
 		line, err := c.stdout.ReadBytes('\n')
 		if err != nil {
 			if len(line) == 0 {
-				return nil, fmt.Errorf("read %s: %w", method, err)
+				return nil, withEngineLogs(fmt.Errorf("read %s: %w", method, err), c.Logs())
 			}
 		}
 		line = trimLine(line)
@@ -232,7 +319,7 @@ func (c *Client) Close() error {
 	case err := <-done:
 		return err
 	case <-time.After(2 * time.Second):
-		_ = c.cmd.Process.Kill()
+		_ = killProcessTree(c.cmd)
 		return nil
 	}
 }

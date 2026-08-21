@@ -51,7 +51,8 @@ func main() {
 	if err != nil {
 		fatal(fmt.Sprintf("could not start the engine: %v\n\n"+
 			"The UI needs the lachesis engine (Python). Install it, or point at it:\n"+
-			"  pip install lachesis        # or your project's install\n"+
+			"  python -m pip install -e /path/to/lachesis  # source checkout\n"+
+			"  python -m pip install lachesis-cpg           # once the release is published\n"+
 			"  lachesis-ui --python /path/to/python\n"+
 			"  LACHESIS_PYTHON=/path/to/python lachesis-ui", err))
 	}
@@ -75,8 +76,12 @@ func resolveGraph(flagVal string, args []string) (path, name string, err error) 
 		if aerr != nil {
 			return "", "", aerr
 		}
-		if _, serr := os.Stat(abs); serr != nil {
+		info, serr := os.Stat(abs)
+		if serr != nil {
 			return "", "", fmt.Errorf("graph not found: %s", candidate)
+		}
+		if !info.IsDir() {
+			return "", "", fmt.Errorf("graph store is not a directory: %s", candidate)
 		}
 		return abs, graphNameOf(abs), nil
 	}

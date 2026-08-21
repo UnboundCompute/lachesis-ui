@@ -18,8 +18,14 @@ func DiscoverPython() string {
 	if p := os.Getenv("LACHESIS_PYTHON"); p != "" {
 		return p
 	}
-	if home, err := os.UserHomeDir(); err == nil {
-		venv := filepath.Join(home, ".lachesis", "venv", "bin", "python")
+	installRoot := os.Getenv("LACHESIS_HOME")
+	if installRoot == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			installRoot = filepath.Join(home, ".lachesis")
+		}
+	}
+	if installRoot != "" {
+		venv := filepath.Join(installRoot, "venv", "bin", "python")
 		if fileExists(venv) {
 			return venv
 		}
@@ -36,6 +42,9 @@ func DiscoverPython() string {
 func GraphsDir() string {
 	if d := os.Getenv("LACHESIS_GRAPHS_DIR"); d != "" {
 		return d
+	}
+	if root := os.Getenv("LACHESIS_HOME"); root != "" {
+		return filepath.Join(root, "graphs")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -67,6 +76,9 @@ func ListGraphs() []Graph {
 		name := e.Name()
 		if !strings.HasSuffix(name, ".kuzu") {
 			continue // skips ".kuzu.enriched" and everything else
+		}
+		if !e.IsDir() {
+			continue // ignore partial files and other non-store artifacts
 		}
 		info, err := e.Info()
 		var mod int64

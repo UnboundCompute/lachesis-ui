@@ -19,13 +19,49 @@
 #   ~/.lachesis/bin/lachesis-ui   the built UI binary
 #   ~/.lachesis/build-graph.sh    helper: build a graph from any source tree
 #
-# Re-running is safe: it updates existing checkouts instead of recloning.
+# Re-running is safe: it updates existing clean checkouts to the requested refs
+# instead of silently retaining an older branch or commit.
 #
 # Env overrides:
 #   LACHESIS_HOME   install root            (default: ~/.lachesis)
 #   PYTHON          python to build the venv (default: python3)
+#   LACHESIS_UI_REF release tag/commit for the go-install fallback (default: v0.1.0)
+#   LACHESIS_UI_VERSION version stamped into a source-built binary (default: 0.1.0)
+#   LACHESIS_BUILD_TIMEOUT maximum seconds for one generated graph build (default: 3600)
 #
 set -euo pipefail
+
+# The installer is intended for terminals and CI alike. Never leave an unattended
+# setup waiting for Git credentials; the public repositories below should fail fast
+# when the runner has no network or credentials rather than hanging indefinitely.
+export GIT_TERMINAL_PROMPT=0
+# Fail slow or stalled HTTPS transfers instead of leaving an unattended bootstrap
+# waiting forever. These are Git's documented low-speed guards and do not affect
+# local checkouts or SSH refs.
+export GIT_HTTP_LOW_SPEED_LIMIT="${GIT_HTTP_LOW_SPEED_LIMIT:-1000}"
+export GIT_HTTP_LOW_SPEED_TIME="${GIT_HTTP_LOW_SPEED_TIME:-60}"
+# Keep pip noninteractive and bound its index/download wait during the engine setup.
+export PIP_NO_INPUT=1
+export PIP_DISABLE_PIP_VERSION_CHECK=1
+export PIP_DEFAULT_TIMEOUT="${PIP_DEFAULT_TIMEOUT:-60}"
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  sed -n '2,/^set -euo pipefail$/p' "$0"
+  cat <<'USAGE'
+
+Usage: ./scripts/install.sh
+
+Configure refs with LACHESIS_REF, ATROPOS_REF, and LACHESIS_UI_REF, and the
+installation root with LACHESIS_HOME. The script has no positional arguments.
+USAGE
+  exit 0
+fi
+if [ "$#" -ne 0 ]; then
+  die() { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+  die "unknown argument '$1' (try --help)"
+fi
 
 LACHESIS_HOME="${LACHESIS_HOME:-$HOME/.lachesis}"
 SRC="$LACHESIS_HOME/src"
@@ -33,6 +69,15 @@ VENV="$LACHESIS_HOME/venv"
 BIN="$LACHESIS_HOME/bin"
 GRAPHS="$LACHESIS_HOME/graphs"
 PYTHON="${PYTHON:-python3}"
+LACHESIS_REF="${LACHESIS_REF:-main}"
+ATROPOS_REF="${ATROPOS_REF:-main}"
+LACHESIS_UI_REF="${LACHESIS_UI_REF:-v0.1.0}"
+DEFAULT_UI_VERSION="0.1.0"
+if [ -f "$HERE/VERSION" ]; then
+  DEFAULT_UI_VERSION="$(tr -d '[:space:]' < "$HERE/VERSION")"
+fi
+LACHESIS_UI_VERSION="${LACHESIS_UI_VERSION:-$DEFAULT_UI_VERSION}"
+LACHESIS_BUILD_TIMEOUT="${LACHESIS_BUILD_TIMEOUT:-3600}"
 
 LACHESIS_REPO="https://github.com/UnboundCompute/lachesis.git"
 ATROPOS_REPO="https://github.com/UnboundCompute/atropos.git"
@@ -41,28 +86,103 @@ info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m warn:\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
+case "$LACHESIS_BUILD_TIMEOUT" in
+  ''|*[!0-9]*|0) die "LACHESIS_BUILD_TIMEOUT must be a positive integer" ;;
+esac
+
+validate_ref() {
+  local label="$1" ref="$2"
+  case "$ref" in
+    ""|[-]*|*[[:space:]]*)
+      die "$label must be a single Git ref (no leading '-' or whitespace)"
+      ;;
+  esac
+}
+
+validate_ref LACHESIS_REF "$LACHESIS_REF"
+validate_ref ATROPOS_REF "$ATROPOS_REF"
+validate_ref LACHESIS_UI_REF "$LACHESIS_UI_REF"
+
+if [ "$LACHESIS_REF" = "main" ]; then
+  warn "LACHESIS_REF=main is mutable; pin a reviewed engine tag or commit for reproducible installs"
+fi
+if [ "$ATROPOS_REF" = "main" ]; then
+  warn "ATROPOS_REF=main is mutable; pin a reviewed catalog tag or commit for reproducible installs"
+fi
+
 need() { command -v "$1" >/dev/null 2>&1 || die "missing required tool: $1"; }
 
 # ---- preflight ------------------------------------------------------------
 need git
 need "$PYTHON"
-command -v go >/dev/null 2>&1 || warn "go not found. Install Go 1.24+ to build the UI (a 'go install' fallback is tried only if you have go)"
+"$PYTHON" - <<'PY'
+import sys
+
+if sys.version_info < (3, 10):
+    raise SystemExit(
+        f"Python 3.10+ is required (found {sys.version_info.major}.{sys.version_info.minor})"
+    )
+PY
+need go
+"$PYTHON" - "$(go version)" <<'PY'
+import re
+import sys
+
+match = re.search(r"go(\d+)\.(\d+)(?:\.(\d+))?", sys.argv[1])
+if match is None:
+    raise SystemExit(f"could not determine Go version from: {sys.argv[1]}")
+found = tuple(int(part or 0) for part in match.groups())
+if found < (1, 24, 2):
+    raise SystemExit(
+        f"Go 1.24.2+ is required (found {found[0]}.{found[1]}.{found[2]})"
+    )
+PY
 
 mkdir -p "$SRC" "$BIN" "$GRAPHS"
 
+# A second installer can otherwise race a checkout update or pip install and leave
+# the shared stack half-written. mkdir is atomic and available on macOS and Linux.
+INSTALL_LOCK="$LACHESIS_HOME/.install.lock"
+if ! mkdir "$INSTALL_LOCK" 2>/dev/null; then
+  owner_pid=""
+  if [ -f "$INSTALL_LOCK/pid" ]; then
+    read -r owner_pid < "$INSTALL_LOCK/pid" || true
+  fi
+  if [ -n "$owner_pid" ] && ! kill -0 "$owner_pid" 2>/dev/null; then
+    rm -f "$INSTALL_LOCK/pid"
+    rmdir "$INSTALL_LOCK" 2>/dev/null || true
+  fi
+  if ! mkdir "$INSTALL_LOCK" 2>/dev/null; then
+    die "another Lachesis installation is already running at $LACHESIS_HOME"
+  fi
+fi
+printf '%s\n' "$$" > "$INSTALL_LOCK/pid"
+trap 'rm -f "$INSTALL_LOCK/pid"; rmdir "$INSTALL_LOCK" 2>/dev/null || true' EXIT
+
 # ---- 1 + 2. clone/update engine and catalog (side by side) ----------------
 clone_or_update() {
-  local url="$1" dir="$2" name="$3"
+  local url="$1" dir="$2" name="$3" ref="$4"
   if [ -d "$dir/.git" ]; then
     info "updating $name"
-    git -C "$dir" pull --ff-only --quiet || warn "$name: could not fast-forward (local changes?), leaving as is"
+    if [ -n "$(git -C "$dir" status --porcelain --untracked-files=all)" ]; then
+      die "$name: local changes found (including untracked files); commit or remove them before changing refs"
+    fi
+    git -C "$dir" fetch --depth 1 --quiet origin "$ref" \
+      || die "$name: could not fetch ref '$ref'"
+    git -C "$dir" checkout --detach --quiet FETCH_HEAD \
+      || die "$name: could not check out ref '$ref'"
   else
     info "cloning $name"
-    git clone --depth 1 --quiet "$url" "$dir"
+    git clone --depth 1 --quiet "$url" "$dir" \
+      || die "$name: could not clone repository"
+    git -C "$dir" fetch --depth 1 origin "$ref" \
+      || die "$name: could not fetch ref '$ref'"
+    git -C "$dir" checkout --detach --quiet FETCH_HEAD \
+      || die "$name: could not check out ref '$ref'"
   fi
 }
-clone_or_update "$LACHESIS_REPO" "$SRC/lachesis" "engine (lachesis)"
-clone_or_update "$ATROPOS_REPO"  "$SRC/atropos"  "catalog (atropos)"
+clone_or_update "$LACHESIS_REPO" "$SRC/lachesis" "engine (lachesis)" "$LACHESIS_REF"
+clone_or_update "$ATROPOS_REPO"  "$SRC/atropos"  "catalog (atropos)" "$ATROPOS_REF"
 
 # ---- 3. engine virtualenv -------------------------------------------------
 if [ ! -x "$VENV/bin/python" ]; then
@@ -71,37 +191,47 @@ if [ ! -x "$VENV/bin/python" ]; then
 fi
 info "installing the engine into the virtualenv"
 "$VENV/bin/python" -m pip install --quiet --upgrade pip
+info "vendoring the pinned TypeScript compiler"
+"$PYTHON" "$SRC/lachesis/tools/vendor_typescript.py"
+"$PYTHON" "$SRC/lachesis/tools/vendor_typescript.py" --check
 "$VENV/bin/python" -m pip install --quiet -e "$SRC/lachesis"
 
 # ---- 4. graph-build helper ------------------------------------------------
 info "writing $LACHESIS_HOME/build-graph.sh"
-cat > "$LACHESIS_HOME/build-graph.sh" <<'HELPER'
+cat > "$LACHESIS_HOME/build-graph.sh" <<HELPER
 #!/usr/bin/env bash
 # build-graph.sh <source_dir> [name]
-# Builds a lachesis graph and prints the store path (~/.lachesis/graphs/<name>.kuzu).
+# Builds a lachesis graph and prints the store path.
 set -euo pipefail
-SRC="${1:?usage: build-graph.sh <source_dir> [name]}"
-SRC="$(cd "$SRC" && pwd)"
-NAME="${2:-$(basename "$SRC")}"
-OUT="$HOME/.lachesis/graphs/$NAME.kuzu"
-export ATROPOS_ROOT="${ATROPOS_ROOT:-$HOME/.lachesis/src/atropos}"
-"$HOME/.lachesis/venv/bin/lachesis-analyze" "$SRC" "$OUT" --prune --timeout 3600
-echo "$OUT"
+SOURCE_DIR="\${1:?usage: build-graph.sh <source_dir> [name]}"
+if [ ! -d "\$SOURCE_DIR" ]; then
+  echo "error: source directory does not exist: \$SOURCE_DIR" >&2
+  exit 2
+fi
+SOURCE_DIR="\$(cd "\$SOURCE_DIR" && pwd)"
+NAME="\${2:-\$(basename "\$SOURCE_DIR")}"
+case "\$NAME" in
+  ""|"."|".."|*/*|*\\*)
+    echo "error: graph name must be a single path component (no '/' or '\\')" >&2
+    exit 2
+    ;;
+esac
+OUT="$GRAPHS/\$NAME.kuzu"
+export ATROPOS_ROOT="\${ATROPOS_ROOT:-$SRC/atropos}"
+"$VENV/bin/lachesis-analyze" "\$SOURCE_DIR" "\$OUT" --prune --timeout $LACHESIS_BUILD_TIMEOUT
+echo "\$OUT"
 HELPER
 chmod +x "$LACHESIS_HOME/build-graph.sh"
 
 # ---- 5. build the UI ------------------------------------------------------
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if command -v go >/dev/null 2>&1; then
-  if [ -f "$HERE/main.go" ]; then
-    info "building lachesis-ui from source checkout"
-    (cd "$HERE" && go build -o "$BIN/lachesis-ui" .)
-  else
-    info "installing lachesis-ui via go install"
-    GOBIN="$BIN" go install github.com/UnboundCompute/lachesis-ui@latest
-  fi
+if [ -f "$HERE/main.go" ]; then
+  info "building lachesis-ui from source checkout"
+  (cd "$HERE" && go build -trimpath \
+    -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$LACHESIS_UI_VERSION" \
+    -o "$BIN/lachesis-ui" .)
 else
-  warn "skipped building the UI (no go). Install Go and run: go build -o $BIN/lachesis-ui ."
+  info "installing lachesis-ui via go install"
+  GOBIN="$BIN" go install "github.com/UnboundCompute/lachesis-ui@$LACHESIS_UI_REF"
 fi
 
 # ---- done -----------------------------------------------------------------

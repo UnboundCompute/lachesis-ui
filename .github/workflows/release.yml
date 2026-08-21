@@ -1,0 +1,93 @@
+name: release binaries
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.goos }}-${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.2"
+          cache: true
+      - name: Verify tag has changelog entry
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          heading = f"## [{version}]"
+          if heading not in Path("CHANGELOG.md").read_text(encoding="utf-8"):
+              raise SystemExit(f"CHANGELOG.md has no release heading for {version}")
+          declared = Path("VERSION").read_text(encoding="utf-8").strip()
+          if declared != version:
+              raise SystemExit(f"VERSION declares {declared}, but tag is {version}")
+          print(f"changelog entry: {heading}")
+          print(f"UI version: {declared}")
+          PY
+      - name: Build and package
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          version="${GITHUB_REF_NAME#v}"
+          name="lachesis-ui-${GITHUB_REF_NAME}-${GOOS}-${GOARCH}"
+          mkdir -p dist
+          go build -trimpath -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$version" -o "dist/$name/lachesis-ui" .
+          cp README.md LICENSE "dist/$name/"
+          # Normalize tar metadata and the gzip header so the same tag rebuilds
+          # to byte-identical artifacts.
+          tar -C dist --sort=name --mtime="@${SOURCE_DATE_EPOCH}" \
+            --owner=0 --group=0 --numeric-owner -cf - "$name" \
+            | gzip -n > "dist/$name.tar.gz"
+          sha256sum "dist/$name.tar.gz" > "/tmp/${name}.first.sha256"
+          tar -C dist --sort=name --mtime="@${SOURCE_DATE_EPOCH}" \
+            --owner=0 --group=0 --numeric-owner -cf - "$name" \
+            | gzip -n > "dist/$name.tar.gz"
+          sha256sum -c "/tmp/${name}.first.sha256"
+          (cd dist && sha256sum "$name.tar.gz") >> dist/SHA256SUMS
+      - name: Smoke-test native binary
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          name="lachesis-ui-${GITHUB_REF_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          expected="lachesis-ui ${version}"
+          verify_dir="$(mktemp -d)"
+          trap 'rm -rf "$verify_dir"' EXIT
+          tar -xzf "dist/$name.tar.gz" -C "$verify_dir"
+          test -f "$verify_dir/$name/lachesis-ui"
+          actual="$("$verify_dir/$name/lachesis-ui" --version)"
+          test "$actual" = "$expected" || {
+            echo "version mismatch: got '$actual', want '$expected'" >&2
+            exit 1
+          }
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lachesis-ui-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/

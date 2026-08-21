@@ -6,8 +6,10 @@ import (
 	"strings"
 )
 
-// Version is stamped into the client handshake and the --version flag.
-const Version = "0.1.0"
+// Version is stamped into the client handshake and the --version flag. Release
+// builds replace it with the tag version via -ldflags; source builds retain the
+// current development default.
+var Version = "0.1.0"
 
 // ---- shared row shapes (as the engine emits them) -------------------------
 

@@ -9,10 +9,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ui-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: build and check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -20,24 +25,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
-          check-latest: true
+          go-version: '1.24.2'
 
-      - name: Verify gofmt
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "These files are not gofmt-clean:"
-            echo "$unformatted"
-            echo "Run 'make fmt' and commit the result."
-            exit 1
-          fi
-
-      - name: go vet
-        run: go vet ./...
-
-      - name: Build
-        run: go build ./...
-
-      - name: Test
-        run: go test ./...
+      - name: Run the local gate
+        run: make check

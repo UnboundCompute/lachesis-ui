@@ -3,6 +3,8 @@
 A keyboard-driven terminal UI for navigating a [lachesis](https://github.com/UnboundCompute/lachesis)
 code-property-graph, the way a developer reads a codebase rather than as a raw graph.
 
+Release and rollback guidance is in [`RELEASING.md`](RELEASING.md).
+
 You point it at a graph built from any Python, TypeScript, JavaScript, or C
 tree and it opens a persistent, k9s-style screen: subsystems and entry points up
 front, a source tree with per-file symbol outlines, and a symbol's neighborhood
@@ -87,8 +89,55 @@ and lays them out as:
 ~/.lachesis/build-graph.sh    helper to build a graph from any source tree
 ```
 
+The installer also vendors Lachesis's pinned TypeScript compiler, so the resulting
+stack can analyze TypeScript without a separate Node/npm setup.
+
 Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
-`python3` (3.10+), and Go 1.24+ to build the binary.
+`python3` (3.10–3.12 are the engine's release-tested versions), and Go 1.24.2+ to
+build the binary. Verify newer Python versions against the engine/Kùzu dependency set
+before using them in production.
+The installer takes an atomic lock, so concurrent invocations fail safely rather than
+mutating the shared virtualenv and checkouts at the same time.
+
+Unattended installs fail fast on stalled network transfers: Git aborts after 60 seconds
+below its low-speed threshold, and pip uses a 60-second default index/download timeout
+with prompts disabled. Override `GIT_HTTP_LOW_SPEED_LIMIT`, `GIT_HTTP_LOW_SPEED_TIME`,
+or `PIP_DEFAULT_TIMEOUT` when a slower private mirror requires it.
+
+The UI bounds each MCP tool request to two minutes so a stalled engine cannot leave the
+terminal waiting forever. For unusually expensive local graphs, override it with a Go
+duration such as `LACHESIS_UI_REQUEST_TIMEOUT=5m`; a timed-out request terminates the
+engine and shows the recent engine diagnostics.
+
+To keep the stack outside your home directory (for example, on a CI volume), set
+`LACHESIS_HOME`; the generated graph helper and UI discovery use the same root:
+
+```sh
+LACHESIS_HOME=/var/cache/lachesis ./scripts/install.sh
+```
+
+For reproducible deployments, pin the engine and catalog before installing (use
+reviewed release tags rather than mutable branches). Re-running the
+installer applies those refs to existing clean checkouts and refuses to touch a
+checkout with local edits or untracked files:
+
+```sh
+LACHESIS_REF=<lachesis-release-tag> ATROPOS_REF=<atropos-release-tag> ./scripts/install.sh
+```
+
+The installer pins its binary fallback to `v0.1.0`; set `LACHESIS_UI_REF` to a
+reviewed tag or commit when selecting another UI release.
+
+The generated `build-graph.sh` helper bounds each frontend invocation to 3,600
+seconds by default. Set `LACHESIS_BUILD_TIMEOUT` before running the installer to
+use a different positive-integer limit.
+
+When building from the checkout, set `LACHESIS_UI_VERSION` if the binary should report
+a version other than the default `0.1.0`:
+
+```sh
+LACHESIS_UI_VERSION=1.2.0 ./scripts/install.sh
+```
 
 Then put the binary on your PATH:
 
@@ -99,17 +148,36 @@ export PATH="$HOME/.lachesis/bin:$PATH"
 ### Just the binary
 
 If you already have the engine installed (`~/.lachesis/venv`, or `lachesis` on
-your PATH), you only need the UI:
+your PATH), you only need the UI. From this checkout, build it with:
 
 ```sh
-go install github.com/UnboundCompute/lachesis-ui@latest
+go build -trimpath -o "$HOME/.lachesis/bin/lachesis-ui" .
 ```
+
+For a tagged release published to the Go module proxy, use:
+
+```sh
+go install github.com/UnboundCompute/lachesis-ui@v0.1.0
+```
+
+Replace `v0.1.0` with the reviewed release tag you intend to deploy; avoid
+`@latest` in production automation.
 
 ### Not pip or npm
 
 `lachesis-ui` is a static Go binary, so it is **not** a pip or npm package. The
-engine it drives is Python (`pip install -e` from the checkout, which
-`install.sh` does for you). Prebuilt binaries and a Homebrew tap are planned.
+engine it drives is Python (`python -m pip install -e` from the checkout, which
+`install.sh` does for you). Tagged releases build Linux and macOS binaries for
+amd64 and arm64 in the `release binaries` workflow. Download the matching archive
+and verify its SHA-256 checksum before unpacking it:
+
+```sh
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+On macOS, use `shasum -a 256 -c SHA256SUMS` instead.
+
+A Homebrew tap is still planned.
 
 ---
 
@@ -119,7 +187,7 @@ Build a graph from any source tree, then launch:
 
 ```sh
 # 1. build a graph (prints the store path)
-~/.lachesis/build-graph.sh /path/to/some/repo
+~/.lachesis/build-graph.sh /path/to/some/repo [name]
 
 # 2. open it. With no args, the UI picks the newest graph you've built
 lachesis-ui
@@ -127,6 +195,10 @@ lachesis-ui
 # or point at one explicitly
 lachesis-ui --graph ~/.lachesis/graphs/somerepo.kuzu
 ```
+
+The optional `name` is a single graph-name component; `/`, `\\`, `.`, and `..` are
+rejected so output stays under `~/.lachesis/graphs` (or your configured
+`LACHESIS_HOME`).
 
 The first screen you touch triggers a one-time graph load (a few seconds for a
 large tree); after that every move is instant.
@@ -179,6 +251,11 @@ lachesis-ui [flags] [graph.kuzu]
 **Engine discovery** order: `$LACHESIS_PYTHON`, then `~/.lachesis/venv/bin/python`,
 then `python3` or `python` on PATH.
 
+Engine startup is bounded to five minutes by default while a large graph loads. Set
+`LACHESIS_UI_STARTUP_TIMEOUT` to a Go duration such as `10m` when a larger codebase
+needs more time; an expired startup terminates the child and reports an actionable
+error.
+
 ---
 
 ## Contributing
@@ -186,6 +263,8 @@ then `python3` or `python` on PATH.
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set
 up the stack, the code layout, and what CI checks before a merge. By
 participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+From a checkout, `make check` runs the same formatting, vet, build, and test gate as CI.
 
 ---
 

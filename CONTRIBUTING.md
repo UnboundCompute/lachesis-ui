@@ -19,7 +19,7 @@ about how that information is shown or navigated, it belongs here.
 
 ## Getting set up
 
-You need Go 1.24+ and, to run the UI against a real graph, the engine.
+You need Go 1.24.2+ and, to run the UI against a real graph, the engine.
 
 ```sh
 git clone https://github.com/UnboundCompute/lachesis-ui
@@ -64,14 +64,13 @@ in the screen's own file.
 
 ## Before you open a pull request
 
-Run the local checks. CI runs the same ones and will block a merge if any fail.
+Run the local gate. CI runs the same command and will block a merge if any check fails.
 
 ```sh
-make fmt      # gofmt: formatting must be clean
-make vet      # go vet: no reported problems
-make build    # the binary must build
-go test ./... # tests must pass
+make check    # gofmt check, vet, build, and tests
 ```
+
+Use `make fmt` when the formatting check reports files that need rewriting.
 
 Guidelines:
 
