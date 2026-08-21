@@ -97,6 +97,11 @@ Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
 The installer takes an atomic lock, so concurrent invocations fail safely rather than
 mutating the shared virtualenv and checkouts at the same time.
 
+Unattended installs fail fast on stalled network transfers: Git aborts after 60 seconds
+below its low-speed threshold, and pip uses a 60-second default index/download timeout
+with prompts disabled. Override `GIT_HTTP_LOW_SPEED_LIMIT`, `GIT_HTTP_LOW_SPEED_TIME`,
+or `PIP_DEFAULT_TIMEOUT` when a slower private mirror requires it.
+
 The UI bounds each MCP tool request to two minutes so a stalled engine cannot leave the
 terminal waiting forever. For unusually expensive local graphs, override it with a Go
 duration such as `LACHESIS_UI_REQUEST_TIMEOUT=5m`; a timed-out request terminates the
