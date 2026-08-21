@@ -95,6 +95,13 @@ stack can analyze TypeScript without a separate Node/npm setup.
 Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
 `python3` (3.10+), and Go 1.24.2+ to build the binary.
 
+To keep the stack outside your home directory (for example, on a CI volume), set
+`LACHESIS_HOME`; the generated graph helper uses the same root:
+
+```sh
+LACHESIS_HOME=/var/cache/lachesis ./scripts/install.sh
+```
+
 For reproducible deployments, pin the engine and catalog before installing (use
 reviewed tags or commit SHAs rather than mutable branches). Re-running the
 installer applies those refs to existing clean checkouts and refuses to touch a

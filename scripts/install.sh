@@ -134,18 +134,18 @@ info "vendoring the pinned TypeScript compiler"
 
 # ---- 4. graph-build helper ------------------------------------------------
 info "writing $LACHESIS_HOME/build-graph.sh"
-cat > "$LACHESIS_HOME/build-graph.sh" <<'HELPER'
+cat > "$LACHESIS_HOME/build-graph.sh" <<HELPER
 #!/usr/bin/env bash
 # build-graph.sh <source_dir> [name]
-# Builds a lachesis graph and prints the store path (~/.lachesis/graphs/<name>.kuzu).
+# Builds a lachesis graph and prints the store path.
 set -euo pipefail
-SRC="${1:?usage: build-graph.sh <source_dir> [name]}"
-SRC="$(cd "$SRC" && pwd)"
-NAME="${2:-$(basename "$SRC")}"
-OUT="$HOME/.lachesis/graphs/$NAME.kuzu"
-export ATROPOS_ROOT="${ATROPOS_ROOT:-$HOME/.lachesis/src/atropos}"
-"$HOME/.lachesis/venv/bin/lachesis-analyze" "$SRC" "$OUT" --prune --timeout 3600
-echo "$OUT"
+SOURCE_DIR="\${1:?usage: build-graph.sh <source_dir> [name]}"
+SOURCE_DIR="\$(cd "\$SOURCE_DIR" && pwd)"
+NAME="\${2:-\$(basename "\$SOURCE_DIR")}"
+OUT="$GRAPHS/\$NAME.kuzu"
+export ATROPOS_ROOT="\${ATROPOS_ROOT:-$SRC/atropos}"
+"$VENV/bin/lachesis-analyze" "\$SOURCE_DIR" "\$OUT" --prune --timeout 3600
+echo "\$OUT"
 HELPER
 chmod +x "$LACHESIS_HOME/build-graph.sh"
 
