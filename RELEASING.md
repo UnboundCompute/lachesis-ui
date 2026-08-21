@@ -20,6 +20,9 @@ README and license, and writes `SHA256SUMS`. Downloaded archives must pass:
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
+Archive ordering, timestamps, and ownership metadata are normalized from the tagged
+commit, so rebuilding the same tag produces identical archive bytes.
+
 The workflow uploads artifacts but does not publish a GitHub release or modify a
 package registry. Promote the reviewed artifacts explicitly and retain the prior
 version for rollback. Never overwrite a published tag; cut a new patch release.

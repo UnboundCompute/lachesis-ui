@@ -37,11 +37,13 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           set -euo pipefail
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           name="lachesis-ui-${GITHUB_REF_NAME}-${GOOS}-${GOARCH}"
           mkdir -p dist
           go build -trimpath -ldflags='-s -w' -o "dist/$name/lachesis-ui" .
           cp README.md LICENSE "dist/$name/"
-          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          tar -C dist --sort=name --mtime="@${SOURCE_DATE_EPOCH}" \
+            --owner=0 --group=0 --numeric-owner -czf "dist/$name.tar.gz" "$name"
           sha256sum "dist/$name.tar.gz" >> dist/SHA256SUMS
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
