@@ -165,7 +165,7 @@ Build a graph from any source tree, then launch:
 
 ```sh
 # 1. build a graph (prints the store path)
-~/.lachesis/build-graph.sh /path/to/some/repo
+~/.lachesis/build-graph.sh /path/to/some/repo [name]
 
 # 2. open it. With no args, the UI picks the newest graph you've built
 lachesis-ui
@@ -173,6 +173,10 @@ lachesis-ui
 # or point at one explicitly
 lachesis-ui --graph ~/.lachesis/graphs/somerepo.kuzu
 ```
+
+The optional `name` is a single graph-name component; `/`, `\\`, `.`, and `..` are
+rejected so output stays under `~/.lachesis/graphs` (or your configured
+`LACHESIS_HOME`).
 
 The first screen you touch triggers a one-time graph load (a few seconds for a
 large tree); after that every move is instant.

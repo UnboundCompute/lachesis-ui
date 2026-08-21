@@ -160,6 +160,12 @@ set -euo pipefail
 SOURCE_DIR="\${1:?usage: build-graph.sh <source_dir> [name]}"
 SOURCE_DIR="\$(cd "\$SOURCE_DIR" && pwd)"
 NAME="\${2:-\$(basename "\$SOURCE_DIR")}"
+case "\$NAME" in
+  ""|"."|".."|*/*|*\\*)
+    echo "error: graph name must be a single path component (no '/' or '\\')" >&2
+    exit 2
+    ;;
+esac
 OUT="$GRAPHS/\$NAME.kuzu"
 export ATROPOS_ROOT="\${ATROPOS_ROOT:-$SRC/atropos}"
 "$VENV/bin/lachesis-analyze" "\$SOURCE_DIR" "\$OUT" --prune --timeout 3600
