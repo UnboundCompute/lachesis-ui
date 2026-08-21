@@ -20,6 +20,9 @@ README and license, and writes `SHA256SUMS`. Downloaded archives must pass:
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
+The workflow stamps each binary with the tag version; verify a downloaded binary with
+`./lachesis-ui --version` before promoting it.
+
 Archive ordering, timestamps, and ownership metadata are normalized from the tagged
 commit, so rebuilding the same tag produces identical archive bytes.
 
