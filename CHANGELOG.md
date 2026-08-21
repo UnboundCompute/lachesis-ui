@@ -19,6 +19,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Changed
 
+- Added a single `make check` developer/CI gate covering formatting, vet, build,
+  and tests.
+
 - The generated `build-graph.sh` helper rejects path-like graph names so output
   cannot escape the configured graph directory.
 
