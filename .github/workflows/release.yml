@@ -30,6 +30,18 @@ jobs:
         with:
           go-version: "1.24.2"
           cache: true
+      - name: Verify tag has changelog entry
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          heading = f"## [{version}]"
+          if heading not in Path("CHANGELOG.md").read_text(encoding="utf-8"):
+              raise SystemExit(f"CHANGELOG.md has no release heading for {version}")
+          print(f"changelog entry: {heading}")
+          PY
       - name: Build and package
         env:
           GOOS: ${{ matrix.goos }}
