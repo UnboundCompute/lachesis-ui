@@ -44,6 +44,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - The binary-only install section now distinguishes the working source build from
   the `go install` command reserved for a published UI tag.
 
+- The stack installer now warns when engine or catalog refs remain on mutable `main`,
+  while preserving those defaults for development use.
+
 - UI startup diagnostics now use `python -m pip` in their engine-install hint,
   avoiding interpreter mismatches during recovery.
 

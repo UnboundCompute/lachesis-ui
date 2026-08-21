@@ -97,6 +97,13 @@ validate_ref LACHESIS_REF "$LACHESIS_REF"
 validate_ref ATROPOS_REF "$ATROPOS_REF"
 validate_ref LACHESIS_UI_REF "$LACHESIS_UI_REF"
 
+if [ "$LACHESIS_REF" = "main" ]; then
+  warn "LACHESIS_REF=main is mutable; pin a reviewed engine tag or commit for reproducible installs"
+fi
+if [ "$ATROPOS_REF" = "main" ]; then
+  warn "ATROPOS_REF=main is mutable; pin a reviewed catalog tag or commit for reproducible installs"
+fi
+
 need() { command -v "$1" >/dev/null 2>&1 || die "missing required tool: $1"; }
 
 # ---- preflight ------------------------------------------------------------
