@@ -1,8 +1,10 @@
 package mcp
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -62,5 +64,26 @@ func TestStartupTimeoutIsConfigurable(t *testing.T) {
 	t.Setenv("LACHESIS_UI_STARTUP_TIMEOUT", "not-a-duration")
 	if got := startupTimeout(); got != defaultStartupTimeout {
 		t.Fatalf("invalid timeout = %s, want default %s", got, defaultStartupTimeout)
+	}
+}
+
+func TestWithEngineLogsIncludesRecentDiagnostics(t *testing.T) {
+	err := withEngineLogs(errors.New("startup failed"), []string{"[lachesis-mcp] starting", "graph missing"})
+	if got := err.Error(); got != "startup failed\nengine stderr:\n[lachesis-mcp] starting\ngraph missing" {
+		t.Fatalf("withEngineLogs() = %q", got)
+	}
+}
+
+func TestWithEngineLogsBoundsOutput(t *testing.T) {
+	logs := make([]string, 25)
+	for i := range logs {
+		logs[i] = filepath.Base(t.TempDir())
+	}
+	got := withEngineLogs(os.ErrClosed, logs).Error()
+	if len(got) == 0 {
+		t.Fatal("withEngineLogs returned an empty error")
+	}
+	if count := len(strings.Split(got, "\n")); count > 22 {
+		t.Fatalf("diagnostic grew beyond bounded stderr tail: %d lines", count)
 	}
 }

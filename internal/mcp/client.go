@@ -87,12 +87,31 @@ func Spawn(python, graphPath string) (*Client, error) {
 		if err == nil {
 			return c, nil
 		}
+		err = withEngineLogs(err, c.Logs())
 		_ = c.Close()
 		return nil, err
 	case <-time.After(timeout):
+		diagnostic := withEngineLogs(
+			fmt.Errorf("engine initialization timed out after %s", timeout),
+			c.Logs(),
+		)
 		_ = c.Close()
-		return nil, fmt.Errorf("engine initialization timed out after %s", timeout)
+		return nil, diagnostic
 	}
+}
+
+// withEngineLogs keeps startup failures actionable without putting stderr on the
+// MCP stdout channel. In particular, a wrong interpreter/cwd and an unreadable
+// graph otherwise look identical to a client as a silent process exit.
+func withEngineLogs(err error, logs []string) error {
+	if len(logs) == 0 {
+		return err
+	}
+	const maxLines = 20
+	if len(logs) > maxLines {
+		logs = logs[len(logs)-maxLines:]
+	}
+	return fmt.Errorf("%w\nengine stderr:\n%s", err, strings.Join(logs, "\n"))
 }
 
 const defaultStartupTimeout = 5 * time.Minute
@@ -195,7 +214,7 @@ func (c *Client) request(method string, params any) (json.RawMessage, error) {
 		line, err := c.stdout.ReadBytes('\n')
 		if err != nil {
 			if len(line) == 0 {
-				return nil, fmt.Errorf("read %s: %w", method, err)
+				return nil, withEngineLogs(fmt.Errorf("read %s: %w", method, err), c.Logs())
 			}
 		}
 		line = trimLine(line)
