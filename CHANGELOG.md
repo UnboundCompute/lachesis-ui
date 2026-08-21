@@ -22,6 +22,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - The Tree keys now match a nested tree: right expands a folder, left collapses
   it or jumps to its parent, and enter opens a folder or a symbol's
   neighborhood.
+- Custom `LACHESIS_HOME` installs now work end-to-end, including UI engine and graph
+  discovery.
+- Engine startup is bounded by a configurable timeout, and invalid graph artifacts
+  are rejected with actionable diagnostics.
 
 ## [0.1.0]
 
