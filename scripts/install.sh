@@ -33,6 +33,8 @@ VENV="$LACHESIS_HOME/venv"
 BIN="$LACHESIS_HOME/bin"
 GRAPHS="$LACHESIS_HOME/graphs"
 PYTHON="${PYTHON:-python3}"
+LACHESIS_REF="${LACHESIS_REF:-main}"
+ATROPOS_REF="${ATROPOS_REF:-main}"
 
 LACHESIS_REPO="https://github.com/UnboundCompute/lachesis.git"
 ATROPOS_REPO="https://github.com/UnboundCompute/atropos.git"
@@ -52,17 +54,22 @@ mkdir -p "$SRC" "$BIN" "$GRAPHS"
 
 # ---- 1 + 2. clone/update engine and catalog (side by side) ----------------
 clone_or_update() {
-  local url="$1" dir="$2" name="$3"
+  local url="$1" dir="$2" name="$3" ref="$4"
   if [ -d "$dir/.git" ]; then
     info "updating $name"
     git -C "$dir" pull --ff-only --quiet || warn "$name: could not fast-forward (local changes?), leaving as is"
   else
     info "cloning $name"
-    git clone --depth 1 --quiet "$url" "$dir"
+    git clone --depth 1 --quiet "$url" "$dir" \
+      || die "$name: could not clone repository"
+    git -C "$dir" fetch --depth 1 origin "$ref" \
+      || die "$name: could not fetch ref '$ref'"
+    git -C "$dir" checkout --detach --quiet FETCH_HEAD \
+      || die "$name: could not check out ref '$ref'"
   fi
 }
-clone_or_update "$LACHESIS_REPO" "$SRC/lachesis" "engine (lachesis)"
-clone_or_update "$ATROPOS_REPO"  "$SRC/atropos"  "catalog (atropos)"
+clone_or_update "$LACHESIS_REPO" "$SRC/lachesis" "engine (lachesis)" "$LACHESIS_REF"
+clone_or_update "$ATROPOS_REPO"  "$SRC/atropos"  "catalog (atropos)" "$ATROPOS_REF"
 
 # ---- 3. engine virtualenv -------------------------------------------------
 if [ ! -x "$VENV/bin/python" ]; then
