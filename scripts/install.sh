@@ -59,7 +59,23 @@ if sys.version_info < (3, 10):
         f"Python 3.10+ is required (found {sys.version_info.major}.{sys.version_info.minor})"
     )
 PY
-command -v go >/dev/null 2>&1 || warn "go not found. Install Go 1.24.2+ to build the UI (a 'go install' fallback is tried only if you have go)"
+if command -v go >/dev/null 2>&1; then
+  "$PYTHON" - "$(go version)" <<'PY'
+import re
+import sys
+
+match = re.search(r"go(\d+)\.(\d+)(?:\.(\d+))?", sys.argv[1])
+if match is None:
+    raise SystemExit(f"could not determine Go version from: {sys.argv[1]}")
+found = tuple(int(part or 0) for part in match.groups())
+if found < (1, 24, 2):
+    raise SystemExit(
+        f"Go 1.24.2+ is required (found {found[0]}.{found[1]}.{found[2]})"
+    )
+PY
+else
+  warn "go not found. Install Go 1.24.2+ to build the UI (a 'go install' fallback is tried only if you have go)"
+fi
 
 mkdir -p "$SRC" "$BIN" "$GRAPHS"
 
