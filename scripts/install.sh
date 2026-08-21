@@ -94,6 +94,14 @@ PY
 
 mkdir -p "$SRC" "$BIN" "$GRAPHS"
 
+# A second installer can otherwise race a checkout update or pip install and leave
+# the shared stack half-written. mkdir is atomic and available on macOS and Linux.
+INSTALL_LOCK="$LACHESIS_HOME/.install.lock"
+if ! mkdir "$INSTALL_LOCK" 2>/dev/null; then
+  die "another Lachesis installation is already running at $LACHESIS_HOME"
+fi
+trap 'rmdir "$INSTALL_LOCK" 2>/dev/null || true' EXIT
+
 # ---- 1 + 2. clone/update engine and catalog (side by side) ----------------
 clone_or_update() {
   local url="$1" dir="$2" name="$3" ref="$4"
