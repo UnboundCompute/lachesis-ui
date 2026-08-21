@@ -87,7 +87,7 @@ jobs:
             exit 1
           }
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lachesis-ui-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/
