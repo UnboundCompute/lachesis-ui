@@ -29,6 +29,22 @@
 #
 set -euo pipefail
 
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  sed -n '2,/^set -euo pipefail$/p' "$0"
+  cat <<'USAGE'
+
+Usage: ./scripts/install.sh
+
+Configure refs with LACHESIS_REF, ATROPOS_REF, and LACHESIS_UI_REF, and the
+installation root with LACHESIS_HOME. The script has no positional arguments.
+USAGE
+  exit 0
+fi
+if [ "$#" -ne 0 ]; then
+  die() { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+  die "unknown argument '$1' (try --help)"
+fi
+
 LACHESIS_HOME="${LACHESIS_HOME:-$HOME/.lachesis}"
 SRC="$LACHESIS_HOME/src"
 VENV="$LACHESIS_HOME/venv"
