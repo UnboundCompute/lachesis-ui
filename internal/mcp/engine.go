@@ -77,6 +77,9 @@ func ListGraphs() []Graph {
 		if !strings.HasSuffix(name, ".kuzu") {
 			continue // skips ".kuzu.enriched" and everything else
 		}
+		if !e.IsDir() {
+			continue // ignore partial files and other non-store artifacts
+		}
 		info, err := e.Info()
 		var mod int64
 		if err == nil {

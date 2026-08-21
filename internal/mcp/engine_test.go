@@ -37,3 +37,18 @@ func TestDiscoverPythonHonorsInstallRoot(t *testing.T) {
 		t.Fatalf("DiscoverPython() = %q, want %q", got, venvPython)
 	}
 }
+
+func TestListGraphsSkipsNonStoreArtifacts(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "valid.kuzu"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "partial.kuzu"), []byte("incomplete"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LACHESIS_GRAPHS_DIR", root)
+	graphs := ListGraphs()
+	if len(graphs) != 1 || graphs[0].Name != "valid" {
+		t.Fatalf("ListGraphs() = %#v, want only valid.kuzu", graphs)
+	}
+}
