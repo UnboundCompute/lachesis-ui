@@ -89,6 +89,9 @@ and lays them out as:
 ~/.lachesis/build-graph.sh    helper to build a graph from any source tree
 ```
 
+The installer also vendors Lachesis's pinned TypeScript compiler, so the resulting
+stack can analyze TypeScript without a separate Node/npm setup.
+
 Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
 `python3` (3.10+), and Go 1.24.2+ to build the binary.
 
