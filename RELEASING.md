@@ -1,6 +1,6 @@
 # Releasing lachesis-ui
 
-The UI is a Go binary released independently from the Lachesis engine and Atropos
+The UI version is recorded in [`VERSION`](VERSION). The UI is a Go binary released independently from the Lachesis engine and Atropos
 catalog. Keep the UI tag and the engine/catalog refs it discovers separate.
 
 Before tagging:
@@ -12,7 +12,8 @@ go test ./...
 go build ./...
 ```
 
-Create an annotated `vMAJOR.MINOR.PATCH` tag from a clean commit. The tag workflow
+Update `VERSION` and the matching changelog heading, then create an annotated
+`vMAJOR.MINOR.PATCH` tag from a clean commit. The tag workflow
 builds Linux and macOS binaries for amd64 and arm64 with CGO disabled, packages the
 README and license, and writes `SHA256SUMS`. Downloaded archives must pass:
 

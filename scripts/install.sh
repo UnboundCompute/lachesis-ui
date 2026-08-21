@@ -44,6 +44,8 @@ export PIP_NO_INPUT=1
 export PIP_DISABLE_PIP_VERSION_CHECK=1
 export PIP_DEFAULT_TIMEOUT="${PIP_DEFAULT_TIMEOUT:-60}"
 
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   sed -n '2,/^set -euo pipefail$/p' "$0"
   cat <<'USAGE'
@@ -69,7 +71,11 @@ PYTHON="${PYTHON:-python3}"
 LACHESIS_REF="${LACHESIS_REF:-main}"
 ATROPOS_REF="${ATROPOS_REF:-main}"
 LACHESIS_UI_REF="${LACHESIS_UI_REF:-v0.1.0}"
-LACHESIS_UI_VERSION="${LACHESIS_UI_VERSION:-0.1.0}"
+DEFAULT_UI_VERSION="0.1.0"
+if [ -f "$HERE/VERSION" ]; then
+  DEFAULT_UI_VERSION="$(tr -d '[:space:]' < "$HERE/VERSION")"
+fi
+LACHESIS_UI_VERSION="${LACHESIS_UI_VERSION:-$DEFAULT_UI_VERSION}"
 
 LACHESIS_REPO="https://github.com/UnboundCompute/lachesis.git"
 ATROPOS_REPO="https://github.com/UnboundCompute/atropos.git"
@@ -205,7 +211,6 @@ HELPER
 chmod +x "$LACHESIS_HOME/build-graph.sh"
 
 # ---- 5. build the UI ------------------------------------------------------
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -f "$HERE/main.go" ]; then
   info "building lachesis-ui from source checkout"
   (cd "$HERE" && go build -trimpath \

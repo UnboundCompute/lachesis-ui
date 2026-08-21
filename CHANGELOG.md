@@ -7,6 +7,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+- Added a machine-readable `VERSION` source used by the installer’s source-build
+  default; release CI now rejects tags that do not match it.
+
 ### Added
 
 - Tagged releases now build checksummed Linux and macOS binaries for amd64 and arm64.
