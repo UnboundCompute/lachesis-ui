@@ -93,7 +93,9 @@ The installer also vendors Lachesis's pinned TypeScript compiler, so the resulti
 stack can analyze TypeScript without a separate Node/npm setup.
 
 Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
-`python3` (3.10+), and Go 1.24.2+ to build the binary.
+`python3` (3.10–3.12 are the engine's release-tested versions), and Go 1.24.2+ to
+build the binary. Verify newer Python versions against the engine/Kùzu dependency set
+before using them in production.
 The installer takes an atomic lock, so concurrent invocations fail safely rather than
 mutating the shared virtualenv and checkouts at the same time.
 

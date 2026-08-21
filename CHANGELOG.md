@@ -51,6 +51,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   timeouts terminate compiler/helper children along with the MCP parent.
 - The stack installer now exposes the generated graph helper's frontend timeout as
   `LACHESIS_BUILD_TIMEOUT` instead of requiring edits to generated shell code.
+- Documented the engine's Python 3.10–3.12 release-tested window in the UI setup guide.
 
 - UI startup diagnostics now use `python -m pip` in their engine-install hint,
   avoiding interpreter mismatches during recovery.
