@@ -52,6 +52,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - The stack installer now exposes the generated graph helper's frontend timeout as
   `LACHESIS_BUILD_TIMEOUT` instead of requiring edits to generated shell code.
 - Documented the engine's Python 3.10–3.12 release-tested window in the UI setup guide.
+- The Makefile now derives its default binary version from `VERSION`, matching the
+  installer and release workflow while retaining explicit `VERSION=...` overrides.
 
 - UI startup diagnostics now use `python -m pip` in their engine-install hint,
   avoiding interpreter mismatches during recovery.

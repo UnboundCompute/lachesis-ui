@@ -1,6 +1,6 @@
 BIN     ?= lachesis-ui
 PREFIX  ?= $(HOME)/.lachesis/bin
-VERSION ?= 0.1.0
+VERSION ?= $(shell tr -d '[:space:]' < VERSION 2>/dev/null || printf '0.1.0')
 LDFLAGS ?= -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$(VERSION)
 
 .PHONY: build install run tidy fmt vet check clean stack
