@@ -49,6 +49,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 - UI engine shutdown now uses a dedicated POSIX process group, so startup or request
   timeouts terminate compiler/helper children along with the MCP parent.
+- The stack installer now exposes the generated graph helper's frontend timeout as
+  `LACHESIS_BUILD_TIMEOUT` instead of requiring edits to generated shell code.
 
 - UI startup diagnostics now use `python -m pip` in their engine-install hint,
   avoiding interpreter mismatches during recovery.

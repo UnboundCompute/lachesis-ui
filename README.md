@@ -126,6 +126,10 @@ LACHESIS_REF=<lachesis-tag-or-sha> ATROPOS_REF=<atropos-tag-or-sha> ./scripts/in
 The installer pins its binary fallback to `v0.1.0`; set `LACHESIS_UI_REF` to a
 reviewed tag or commit when selecting another UI release.
 
+The generated `build-graph.sh` helper bounds each frontend invocation to 3,600
+seconds by default. Set `LACHESIS_BUILD_TIMEOUT` before running the installer to
+use a different positive-integer limit.
+
 When building from the checkout, set `LACHESIS_UI_VERSION` if the binary should report
 a version other than the default `0.1.0`:
 

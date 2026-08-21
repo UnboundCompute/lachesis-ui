@@ -27,6 +27,7 @@
 #   PYTHON          python to build the venv (default: python3)
 #   LACHESIS_UI_REF release tag/commit for the go-install fallback (default: v0.1.0)
 #   LACHESIS_UI_VERSION version stamped into a source-built binary (default: 0.1.0)
+#   LACHESIS_BUILD_TIMEOUT maximum seconds for one generated graph build (default: 3600)
 #
 set -euo pipefail
 
@@ -76,6 +77,7 @@ if [ -f "$HERE/VERSION" ]; then
   DEFAULT_UI_VERSION="$(tr -d '[:space:]' < "$HERE/VERSION")"
 fi
 LACHESIS_UI_VERSION="${LACHESIS_UI_VERSION:-$DEFAULT_UI_VERSION}"
+LACHESIS_BUILD_TIMEOUT="${LACHESIS_BUILD_TIMEOUT:-3600}"
 
 LACHESIS_REPO="https://github.com/UnboundCompute/lachesis.git"
 ATROPOS_REPO="https://github.com/UnboundCompute/atropos.git"
@@ -83,6 +85,10 @@ ATROPOS_REPO="https://github.com/UnboundCompute/atropos.git"
 info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m warn:\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+
+case "$LACHESIS_BUILD_TIMEOUT" in
+  ''|*[!0-9]*|0) die "LACHESIS_BUILD_TIMEOUT must be a positive integer" ;;
+esac
 
 validate_ref() {
   local label="$1" ref="$2"
@@ -212,7 +218,7 @@ case "\$NAME" in
 esac
 OUT="$GRAPHS/\$NAME.kuzu"
 export ATROPOS_ROOT="\${ATROPOS_ROOT:-$SRC/atropos}"
-"$VENV/bin/lachesis-analyze" "\$SOURCE_DIR" "\$OUT" --prune --timeout 3600
+"$VENV/bin/lachesis-analyze" "\$SOURCE_DIR" "\$OUT" --prune --timeout $LACHESIS_BUILD_TIMEOUT
 echo "\$OUT"
 HELPER
 chmod +x "$LACHESIS_HOME/build-graph.sh"
