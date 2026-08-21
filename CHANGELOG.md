@@ -19,6 +19,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Changed
 
+- The install documentation now uses `python -m pip` so engine dependencies
+  stay in the interpreter the UI discovers.
+
 - MCP startup and request failures now include the bounded recent engine stderr
   tail, making wrong-interpreter, missing-graph, and import failures visible in
   the UI instead of looking like a silent server exit.

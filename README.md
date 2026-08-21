@@ -144,7 +144,7 @@ Replace `v0.1.0` with the reviewed release tag you intend to deploy; avoid
 ### Not pip or npm
 
 `lachesis-ui` is a static Go binary, so it is **not** a pip or npm package. The
-engine it drives is Python (`pip install -e` from the checkout, which
+engine it drives is Python (`python -m pip install -e` from the checkout, which
 `install.sh` does for you). Tagged releases build Linux and macOS binaries for
 amd64 and arm64 in the `release binaries` workflow. Download the matching archive
 and verify its SHA-256 checksum before unpacking it:
