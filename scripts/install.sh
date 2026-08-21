@@ -25,6 +25,7 @@
 # Env overrides:
 #   LACHESIS_HOME   install root            (default: ~/.lachesis)
 #   PYTHON          python to build the venv (default: python3)
+#   LACHESIS_UI_REF release tag/commit for the go-install fallback (default: v0.1.0)
 #
 set -euo pipefail
 
@@ -36,6 +37,7 @@ GRAPHS="$LACHESIS_HOME/graphs"
 PYTHON="${PYTHON:-python3}"
 LACHESIS_REF="${LACHESIS_REF:-main}"
 ATROPOS_REF="${ATROPOS_REF:-main}"
+LACHESIS_UI_REF="${LACHESIS_UI_REF:-v0.1.0}"
 
 LACHESIS_REPO="https://github.com/UnboundCompute/lachesis.git"
 ATROPOS_REPO="https://github.com/UnboundCompute/atropos.git"
@@ -112,7 +114,7 @@ if command -v go >/dev/null 2>&1; then
     (cd "$HERE" && go build -o "$BIN/lachesis-ui" .)
   else
     info "installing lachesis-ui via go install"
-    GOBIN="$BIN" go install github.com/UnboundCompute/lachesis-ui@latest
+    GOBIN="$BIN" go install "github.com/UnboundCompute/lachesis-ui@$LACHESIS_UI_REF"
   fi
 else
   warn "skipped building the UI (no go). Install Go and run: go build -o $BIN/lachesis-ui ."
