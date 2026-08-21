@@ -95,7 +95,7 @@ Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
 For reproducible deployments, pin the engine and catalog before installing (use
 reviewed tags or commit SHAs rather than mutable branches). Re-running the
 installer applies those refs to existing clean checkouts and refuses to touch a
-checkout with local edits:
+checkout with local edits or untracked files:
 
 ```sh
 LACHESIS_REF=<lachesis-tag-or-sha> ATROPOS_REF=<atropos-tag-or-sha> ./scripts/install.sh

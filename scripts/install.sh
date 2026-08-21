@@ -60,8 +60,8 @@ clone_or_update() {
   local url="$1" dir="$2" name="$3" ref="$4"
   if [ -d "$dir/.git" ]; then
     info "updating $name"
-    if ! git -C "$dir" diff --quiet || ! git -C "$dir" diff --cached --quiet; then
-      die "$name: local changes found; commit or remove them before changing refs"
+    if [ -n "$(git -C "$dir" status --porcelain --untracked-files=all)" ]; then
+      die "$name: local changes found (including untracked files); commit or remove them before changing refs"
     fi
     git -C "$dir" fetch --depth 1 --quiet origin "$ref" \
       || die "$name: could not fetch ref '$ref'"
