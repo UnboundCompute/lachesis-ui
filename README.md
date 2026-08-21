@@ -242,6 +242,8 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set
 up the stack, the code layout, and what CI checks before a merge. By
 participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+From a checkout, `make check` runs the same formatting, vet, build, and test gate as CI.
+
 ---
 
 ## License
