@@ -75,8 +75,12 @@ func resolveGraph(flagVal string, args []string) (path, name string, err error) 
 		if aerr != nil {
 			return "", "", aerr
 		}
-		if _, serr := os.Stat(abs); serr != nil {
+		info, serr := os.Stat(abs)
+		if serr != nil {
 			return "", "", fmt.Errorf("graph not found: %s", candidate)
+		}
+		if !info.IsDir() {
+			return "", "", fmt.Errorf("graph store is not a directory: %s", candidate)
 		}
 		return abs, graphNameOf(abs), nil
 	}
