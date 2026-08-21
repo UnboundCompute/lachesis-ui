@@ -3,6 +3,8 @@
 A keyboard-driven terminal UI for navigating a [lachesis](https://github.com/UnboundCompute/lachesis)
 code-property-graph, the way a developer reads a codebase rather than as a raw graph.
 
+Release and rollback guidance is in [`RELEASING.md`](RELEASING.md).
+
 You point it at a graph built from any Python, TypeScript, JavaScript, or C
 tree and it opens a persistent, k9s-style screen: subsystems and entry points up
 front, a source tree with per-file symbol outlines, and a symbol's neighborhood
