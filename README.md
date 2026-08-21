@@ -97,6 +97,11 @@ Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
 The installer takes an atomic lock, so concurrent invocations fail safely rather than
 mutating the shared virtualenv and checkouts at the same time.
 
+The UI bounds each MCP tool request to two minutes so a stalled engine cannot leave the
+terminal waiting forever. For unusually expensive local graphs, override it with a Go
+duration such as `LACHESIS_UI_REQUEST_TIMEOUT=5m`; a timed-out request terminates the
+engine and shows the recent engine diagnostics.
+
 To keep the stack outside your home directory (for example, on a CI volume), set
 `LACHESIS_HOME`; the generated graph helper and UI discovery use the same root:
 

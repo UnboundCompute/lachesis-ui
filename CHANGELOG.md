@@ -19,6 +19,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Changed
 
+- UI MCP tool requests now have a two-minute default bound, configurable with
+  `LACHESIS_UI_REQUEST_TIMEOUT`, and report recent engine diagnostics when a request
+  times out instead of leaving the terminal waiting indefinitely.
+
 - The install documentation now uses `python -m pip` so engine dependencies
   stay in the interpreter the UI discovers.
 

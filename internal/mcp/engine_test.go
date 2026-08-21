@@ -67,6 +67,17 @@ func TestStartupTimeoutIsConfigurable(t *testing.T) {
 	}
 }
 
+func TestRequestTimeoutIsConfigurable(t *testing.T) {
+	t.Setenv("LACHESIS_UI_REQUEST_TIMEOUT", "17s")
+	if got, want := requestTimeout(), 17*time.Second; got != want {
+		t.Fatalf("requestTimeout() = %s, want %s", got, want)
+	}
+	t.Setenv("LACHESIS_UI_REQUEST_TIMEOUT", "not-a-duration")
+	if got := requestTimeout(); got != defaultRequestTimeout {
+		t.Fatalf("invalid timeout = %s, want default %s", got, defaultRequestTimeout)
+	}
+}
+
 func TestWithEngineLogsIncludesRecentDiagnostics(t *testing.T) {
 	err := withEngineLogs(errors.New("startup failed"), []string{"[lachesis-mcp] starting", "graph missing"})
 	if got := err.Error(); got != "startup failed\nengine stderr:\n[lachesis-mcp] starting\ngraph missing" {

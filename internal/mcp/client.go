@@ -160,10 +160,10 @@ func (c *Client) Call(tool string, args map[string]any) (json.RawMessage, error)
 	if _, ok := args["format"]; !ok {
 		args["format"] = "json"
 	}
-	raw, err := c.request("tools/call", map[string]any{
+	raw, err := c.requestBounded("tools/call", map[string]any{
 		"name":      tool,
 		"arguments": args,
-	})
+	}, tool)
 	if err != nil {
 		return nil, err
 	}
@@ -186,6 +186,49 @@ func (c *Client) Call(tool string, args map[string]any) (json.RawMessage, error)
 		return nil, fmt.Errorf("%s: %s", tool, strings.TrimPrefix(text, "error: "))
 	}
 	return json.RawMessage(text), nil
+}
+
+const defaultRequestTimeout = 2 * time.Minute
+
+func requestTimeout() time.Duration {
+	value := os.Getenv("LACHESIS_UI_REQUEST_TIMEOUT")
+	if value == "" {
+		return defaultRequestTimeout
+	}
+	timeout, err := time.ParseDuration(value)
+	if err != nil || timeout <= 0 {
+		return defaultRequestTimeout
+	}
+	return timeout
+}
+
+// requestBounded prevents a stalled engine query from leaving the terminal UI
+// permanently waiting. Once a request exceeds the bound, the engine is closed so
+// queued calls cannot continue against an unresponsive process; the stderr tail is
+// retained in the returned error for an actionable diagnosis.
+func (c *Client) requestBounded(method string, params any, label string) (json.RawMessage, error) {
+	result := make(chan struct {
+		raw json.RawMessage
+		err error
+	}, 1)
+	go func() {
+		raw, err := c.request(method, params)
+		result <- struct {
+			raw json.RawMessage
+			err error
+		}{raw: raw, err: err}
+	}()
+	timeout := requestTimeout()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case r := <-result:
+		return r.raw, r.err
+	case <-timer.C:
+		err := withEngineLogs(fmt.Errorf("%s timed out after %s", label, timeout), c.Logs())
+		_ = c.Close()
+		return nil, err
+	}
 }
 
 // request performs one synchronous JSON-RPC round trip.
