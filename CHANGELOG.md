@@ -7,6 +7,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.1.1]
+
+- Release the production-readiness and release-reference fixes from `main`.
+
 - Added a machine-readable `VERSION` source used by the installer’s source-build
   default; release CI now rejects tags that do not match it.
 
