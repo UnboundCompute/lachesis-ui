@@ -38,9 +38,10 @@ jobs:
         run: |
           set -euo pipefail
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          version="${GITHUB_REF_NAME#v}"
           name="lachesis-ui-${GITHUB_REF_NAME}-${GOOS}-${GOARCH}"
           mkdir -p dist
-          go build -trimpath -ldflags='-s -w' -o "dist/$name/lachesis-ui" .
+          go build -trimpath -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$version" -o "dist/$name/lachesis-ui" .
           cp README.md LICENSE "dist/$name/"
           tar -C dist --sort=name --mtime="@${SOURCE_DATE_EPOCH}" \
             --owner=0 --group=0 --numeric-owner -czf "dist/$name.tar.gz" "$name"
