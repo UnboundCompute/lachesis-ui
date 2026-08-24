@@ -17,8 +17,12 @@ func hubsView(rows []mcp.Hub, selected, width, height int) string {
 		if i >= 40 {
 			break
 		}
+		kind := h.Kind
+		if kind == "" {
+			kind = "symbol"
+		}
 		role := strings.Join(h.Flags, ",")
-		line := fmt.Sprintf("%-23s %-10s %-20s %-5d %-5d %-8d %s", h.Name, h.Handle, fmt.Sprintf("%s:%d", h.File, h.Line), h.FanIn, h.FanOut, h.Degree, role)
+		line := fmt.Sprintf("%-23s %-10s %-20s %-5d %-5d %-8d %s", h.Name, kind, fmt.Sprintf("%s:%d", h.File, h.Line), h.FanIn, h.FanOut, h.Degree, role)
 		fmt.Fprintln(&b, selRule(i == selected)+line)
 	}
 	if len(rows) == 0 {

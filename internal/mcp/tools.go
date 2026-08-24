@@ -28,6 +28,7 @@ type Symbol struct {
 type Hub struct {
 	NodeID string   `json:"node_id"`
 	Name   string   `json:"name"`
+	Kind   string   `json:"kind"`
 	Handle string   `json:"handle"`
 	File   string   `json:"file"`
 	Line   int      `json:"line"`
