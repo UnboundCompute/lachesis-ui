@@ -28,6 +28,7 @@ const (
 	viewSkeleton
 	viewToolResult
 	viewScan
+	viewHubs
 )
 
 // App is the root Bubbletea model.
@@ -304,6 +305,10 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "f":
 		a.returnView = a.view
 		return a, loadScanCmd(a.client)
+	case "h":
+		a.returnView = a.view
+		a.view = viewHubs
+		return a, nil
 	case "tab":
 		a.returnView = a.view
 		return a, loadCandidatesCmd(a.client)
@@ -439,6 +444,8 @@ func (a App) View() string {
 			body = a.toolView(bodyHeight)
 		case viewScan:
 			body = scanView(a.scanData, a.width, bodyHeight)
+		case viewHubs:
+			body = hubsView(a.overview.hubs, a.width, bodyHeight)
 		}
 	}
 	body = lipgloss.NewStyle().Height(bodyHeight).MaxHeight(bodyHeight).Render(body)
@@ -507,7 +514,7 @@ func (a App) renderStatus() string {
 		hints = key("↑↓", "move/scroll") + key("→", "expand/select symbol") + key("b", "full source") + key("enter", "see symbol map")
 	case viewNeighborhood:
 		hints = key("enter", "open selected") + key("b", "full body/preview") + key("↑↓", "move/scroll") + key("tab", "switch side") + key("[ ]", "back/forward")
-	case viewFindings, viewFindingDetail, viewReaches, viewSkeleton, viewToolResult, viewScan:
+	case viewFindings, viewFindingDetail, viewReaches, viewSkeleton, viewToolResult, viewScan, viewHubs:
 		hints = key("enter", "inspect") + key("r", "witness path") + key("s", "skeleton") + key("esc", "back")
 	}
 	label := "NAVIGATE"

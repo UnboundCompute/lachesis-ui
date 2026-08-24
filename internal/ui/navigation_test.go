@@ -111,7 +111,7 @@ func TestEveryScreenRendersAtNarrowWidth(t *testing.T) {
 	a := navigationFixture()
 	a.width, a.height = 80, 24
 	a.findings.rows = []mcp.Candidate{{ID: "c-1", Rank: .83, Source: "render_markup", Sink: "resp.write", Entrypoint: "render_markup", Kind: "markup", File: "view.py", Line: 212, Guard: "unproven"}}
-	for _, v := range []view{viewOverview, viewTree, viewNeighborhood, viewFindings, viewFindingDetail, viewReaches, viewSkeleton} {
+	for _, v := range []view{viewOverview, viewTree, viewNeighborhood, viewFindings, viewFindingDetail, viewReaches, viewSkeleton, viewScan, viewHubs} {
 		a.view = v
 		a.findings.active = a.findings.rows[0]
 		frame := a.View()
