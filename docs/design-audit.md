@@ -77,3 +77,9 @@ primary navigation, while hunting/coverage tools should be reachable from the
 Findings screen and command palette. Tool descriptions that say “neutral,”
 “coverage,” or “unavailable” are surfaced in the UI copy so developers do not
 mistake analysis gaps for clean code.
+
+The structured report contains 45 tools: 26 tier-A, 12 tier-B, and 7 tier-C.
+The lower-scoring tools are mostly advanced analysis surfaces, so the UI keeps
+them out of the default navigation and exposes their raw response only after a
+developer deliberately chooses the command. This avoids presenting a sparse or
+ambiguous result as a conclusion.
