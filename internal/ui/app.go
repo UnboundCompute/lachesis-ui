@@ -180,6 +180,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.findings.active, a.findings.skeleton, a.view = msg.candidate, msg.data, viewSkeleton
 		return a, nil
 	case toolResultMsg:
+		if msg.name == "review" {
+			if msg.err != nil {
+				a.statusHint = "review could not be saved: " + msg.err.Error()
+			} else {
+				a.statusHint = "review decision saved for this session"
+			}
+			return a, nil
+		}
 		a.toolName, a.toolBody, a.toolErr, a.view = msg.name, msg.body, msg.err, viewToolResult
 		return a, nil
 	case scanLoadedMsg:
