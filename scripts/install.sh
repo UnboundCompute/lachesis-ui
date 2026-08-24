@@ -19,6 +19,7 @@
 #   ~/.lachesis/bin/lachesis-ui   the built UI binary
 #   ~/.lachesis/build-graph.sh    helper: build a graph from any source tree
 #   ~/.lachesis/stack-manifest.json exact resolved refs for the installed stack
+#   ~/.lachesis/doctor.sh        lightweight installation health check
 #
 # Re-running is safe: it updates existing clean checkouts to the requested refs
 # instead of silently retaining an older branch or commit.
@@ -223,6 +224,8 @@ export ATROPOS_ROOT="\${ATROPOS_ROOT:-$SRC/atropos}"
 echo "\$OUT"
 HELPER
 chmod +x "$LACHESIS_HOME/build-graph.sh"
+cp "$HERE/scripts/doctor.sh" "$LACHESIS_HOME/doctor.sh"
+chmod +x "$LACHESIS_HOME/doctor.sh"
 
 # ---- 5. build the UI ------------------------------------------------------
 if [ -f "$HERE/main.go" ]; then
@@ -273,6 +276,7 @@ $(info 'stack ready')
   catalog  $SRC/atropos
   UI       $BIN/lachesis-ui
   receipt  $LACHESIS_HOME/stack-manifest.json
+  doctor   $LACHESIS_HOME/doctor.sh
 
 Add the UI to your PATH:
 

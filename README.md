@@ -89,6 +89,7 @@ and lays them out as:
 ~/.lachesis/bin/lachesis-ui   the UI binary
 ~/.lachesis/build-graph.sh    helper to build a graph from any source tree
 ~/.lachesis/stack-manifest.json resolved engine/catalog/UI receipt
+~/.lachesis/doctor.sh         lightweight installation health check
 ```
 
 The installer also vendors Lachesis's pinned TypeScript compiler, so the resulting
@@ -219,6 +220,13 @@ rejected so output stays under `~/.lachesis/graphs` (or your configured
 
 The first screen you touch triggers a one-time graph load (a few seconds for a
 large tree); after that every move is instant.
+
+If setup fails or the environment changes, run the health check without building
+or scanning a graph:
+
+```sh
+~/.lachesis/doctor.sh
+```
 
 ---
 
