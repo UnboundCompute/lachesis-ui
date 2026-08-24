@@ -11,15 +11,16 @@ front, a source tree with per-file symbol outlines, and a symbol's neighborhood
 (who reaches it, what it uses) grouped by module instead of dumped as a flat
 list. It is navigation-driven, not a chat box. Every move is a keystroke.
 
-> **Status: v1, navigation only.** Finding and scanning surfaces (the candidate
-> registry, taint) land in a later release. This version is the reader.
+> **Status: active development.** Navigation, scan, findings, witness, skeleton,
+> and centrality review surfaces are available; graph capability frontiers are
+> shown explicitly in the UI and tracked in `docs/design-audit.md`.
 
 ---
 
 ## Screens
 
-Three screens, each a different lens on the same graph (shown here over the curl
-source tree).
+The UI combines navigation and evidence review screens, each a different lens
+on the same graph.
 
 **Overview**, the map: subsystems ranked by how much of the spine they hold,
 the entry points, and the highest-degree nodes as a "start here".

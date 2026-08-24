@@ -123,7 +123,8 @@ Flags:
   --version        print version and exit
 
 Keys (in-app):
-  1/o overview   2/t tree   3 neighborhood   / search   q quit
+  1/o overview   2/t tree   3 neighborhood   f scan   h hubs
+  tab findings  / search   : commands   ? help   q quit
 `)
 }
 
