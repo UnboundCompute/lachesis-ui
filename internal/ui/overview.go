@@ -148,6 +148,7 @@ func (m *overviewModel) update(a *App, msg tea.KeyMsg) tea.Cmd {
 			return func() tea.Msg { return gotoTreeMsg{path: p} }
 		case rowHub:
 			name := row.hub.Name
+			a.returnView = viewOverview
 			return func() tea.Msg { return gotoNeighborhoodMsg{name: name} }
 		}
 	}

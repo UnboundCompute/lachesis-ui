@@ -2,10 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"github.com/UnboundCompute/lachesis-ui/internal/mcp"
-	tea "github.com/charmbracelet/bubbletea"
 	"sort"
 	"strings"
+
+	"github.com/UnboundCompute/lachesis-ui/internal/mcp"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 )
 
 type findingsModel struct {
@@ -139,7 +141,16 @@ func (m findingsModel) skeletonView(a *App, h int) string {
 	}
 	return padView(b.String(), a.width, h)
 }
-func padView(s string, w, h int) string { return strings.TrimRight(s, "\n") }
+func padView(s string, w, h int) string {
+	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
+	if h > 0 && len(lines) > h {
+		lines = lines[:h]
+	}
+	for i, line := range lines {
+		lines[i] = ansi.Truncate(line, max(1, w-2), "…")
+	}
+	return strings.Join(lines, "\n")
+}
 func or(a, b string) string {
 	if a == "" {
 		return b
@@ -153,8 +164,27 @@ func (a *App) findingsKey(msg tea.KeyMsg) tea.Cmd {
 		a.view = viewOverview
 		return nil
 	case "esc":
-		a.view = viewOverview
+		a.view = a.returnView
 		return nil
 	}
 	return a.findings.update(a, msg)
+}
+
+func (a App) toolView(h int) string {
+	var b strings.Builder
+	fmt.Fprintln(&b, stDim.Render("Command / ")+stCyanB.Render(a.toolName))
+	fmt.Fprintln(&b, stDim.Render("Raw graph response — inspect it here without leaving the navigation context."))
+	fmt.Fprintln(&b)
+	if a.toolErr != nil {
+		fmt.Fprintln(&b, stRed.Render("request failed: "+a.toolErr.Error()))
+		return padView(b.String(), a.width, h)
+	}
+	if a.toolBody == "" {
+		fmt.Fprintln(&b, stAmber.Render("the graph returned no data"))
+		return padView(b.String(), a.width, h)
+	}
+	for _, line := range strings.Split(a.toolBody, "\n") {
+		fmt.Fprintln(&b, stFg.Render(line))
+	}
+	return padView(b.String(), a.width, h)
 }

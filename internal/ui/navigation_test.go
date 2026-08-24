@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -103,6 +104,77 @@ func TestHelpOverlayIsDiscoverable(t *testing.T) {
 	a = model.(App)
 	if a.help {
 		t.Fatal("esc did not close the help overlay")
+	}
+}
+
+func TestEveryScreenRendersAtNarrowWidth(t *testing.T) {
+	a := navigationFixture()
+	a.width, a.height = 80, 24
+	a.findings.rows = []mcp.Candidate{{ID: "c-1", Rank: .83, Source: "render_markup", Sink: "resp.write", Entrypoint: "render_markup", Kind: "markup", File: "view.py", Line: 212, Guard: "unproven"}}
+	for _, v := range []view{viewOverview, viewTree, viewNeighborhood, viewFindings, viewFindingDetail, viewReaches, viewSkeleton} {
+		a.view = v
+		a.findings.active = a.findings.rows[0]
+		frame := a.View()
+		if got := lipgloss.Width(frame); got != 80 {
+			t.Errorf("view %d width = %d, want 80", v, got)
+		}
+		if got := lipgloss.Height(frame); got != 24 {
+			t.Errorf("view %d height = %d, want 24", v, got)
+		}
+	}
+}
+
+func TestFindingsFlowAndBackStack(t *testing.T) {
+	a := navigationFixture()
+	a.findings.rows = []mcp.Candidate{{ID: "c-1", Source: "source", Sink: "sink", Entrypoint: "entry"}}
+	a.returnView = viewNeighborhood
+	a.view = viewFindings
+	model, _ := a.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	a = model.(App)
+	if a.view != viewFindingDetail {
+		t.Fatalf("enter should open detail, got %v", a.view)
+	}
+	model, _ = a.handleKey(tea.KeyMsg{Type: tea.KeyEsc})
+	a = model.(App)
+	if a.view != viewFindings {
+		t.Fatalf("esc from detail should return findings, got %v", a.view)
+	}
+	model, _ = a.handleKey(tea.KeyMsg{Type: tea.KeyEsc})
+	a = model.(App)
+	if a.view != viewNeighborhood {
+		t.Fatalf("esc from findings should return prior screen, got %v", a.view)
+	}
+}
+
+func TestCommandPaletteHasBoundedSelection(t *testing.T) {
+	a := navigationFixture()
+	model, _ := a.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{':'}})
+	a = model.(App)
+	if !a.palette || a.paletteSel != 0 {
+		t.Fatal("palette did not open at first command")
+	}
+	for i := 0; i < 20; i++ {
+		model, _ = a.handleKey(tea.KeyMsg{Type: tea.KeyDown})
+		a = model.(App)
+	}
+	if a.paletteSel != 4 {
+		t.Fatalf("palette selection escaped bounds: %d", a.paletteSel)
+	}
+	model, _ = a.handleKey(tea.KeyMsg{Type: tea.KeyEsc})
+	a = model.(App)
+	if a.palette {
+		t.Fatal("esc did not close palette")
+	}
+}
+
+func TestToolResultViewExplainsUnavailableData(t *testing.T) {
+	a := navigationFixture()
+	a.view = viewToolResult
+	a.toolName = "flow"
+	a.toolErr = fmt.Errorf("graph unavailable")
+	plain := ansi.Strip(a.View())
+	if !strings.Contains(plain, "flow") || !strings.Contains(plain, "request failed") {
+		t.Fatalf("tool result did not explain failure: %q", plain)
 	}
 }
 

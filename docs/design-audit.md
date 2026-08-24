@@ -35,7 +35,21 @@ showing a red “bug” badge would create a dangerous false promise.
 
 ## Known gaps and stubs
 
-1. **Candidate payload shape varies by Atropos constructor.** The UI keeps
+The interaction model is intentionally wider than the static artboards:
+
+- Findings has a return stack, so evidence review returns to the screen that
+  opened it instead of always teleporting to the overview.
+- Tree and Neighborhood expose the skeleton action shown in the designs; when
+  the required candidate context is absent they use a clearly marked function
+  stub rather than fabricating a sink.
+- The command palette runs `reaches`, `sources_of`, and `flow` into a bounded
+  raw-result screen. This makes advanced graph operations discoverable without
+  adding another permanent pane.
+- Every tool result has an explicit error/empty state, and every screen is
+  clipped to the terminal viewport so long responses cannot push the footer
+  off-screen.
+
+1. **Candidate payload shape varies by catalog constructor.** The UI keeps
    stable triage fields and a raw evidence map. If a constructor omits a field,
    the screen says “not reported” rather than inventing data.
 2. **No server persistence for “killed” or “confirmed as bug”.** `k` currently
@@ -63,4 +77,3 @@ primary navigation, while hunting/coverage tools should be reachable from the
 Findings screen and command palette. Tool descriptions that say “neutral,”
 “coverage,” or “unavailable” are surfaced in the UI copy so developers do not
 mistake analysis gaps for clean code.
-

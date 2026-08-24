@@ -26,6 +26,7 @@ const (
 	viewFindingDetail
 	viewReaches
 	viewSkeleton
+	viewToolResult
 )
 
 // App is the root Bubbletea model.
@@ -40,12 +41,16 @@ type App struct {
 	err           error
 	statusHint    string
 
-	view      view
-	overview  overviewModel
-	tree      treeModel
-	neigh     neighModel
-	neighInit bool // whether the neighborhood has ever been loaded
-	findings  findingsModel
+	view       view
+	returnView view
+	overview   overviewModel
+	tree       treeModel
+	neigh      neighModel
+	neighInit  bool // whether the neighborhood has ever been loaded
+	findings   findingsModel
+	toolName   string
+	toolBody   string
+	toolErr    error
 
 	searching  bool
 	search     textinput.Model
@@ -123,6 +128,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.neigh.pushHistory(msg.name)
 		a.neigh.beginLoad(msg.name)
 		return a, loadNeighborhoodCmd(a.client, msg.name, a.root)
+	case gotoSkeletonMsg:
+		a.findings.active = msg.candidate
+		a.findings.skeleton = nil
+		a.view = viewSkeleton
+		return a, loadSkeletonCmd(a.client, msg.candidate)
 
 	// ---- data arrivals: route to the owning screen --------------------
 	case overviewLoadedMsg:
@@ -166,6 +176,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case skeletonLoadedMsg:
 		a.findings.active, a.findings.skeleton, a.view = msg.candidate, msg.data, viewSkeleton
 		return a, nil
+	case toolResultMsg:
+		a.toolName, a.toolBody, a.toolErr, a.view = msg.name, msg.body, msg.err, viewToolResult
+		return a, nil
 	}
 	return a, nil
 }
@@ -193,6 +206,7 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if sel, ok := a.results.selected(); ok {
 				a.searching = false
 				a.search.Blur()
+				a.returnView = a.view
 				return a, func() tea.Msg { return gotoNeighborhoodMsg{name: sel.Name} }
 			}
 			return a, nil
@@ -202,6 +216,7 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if sel, ok := a.results.selected(); ok {
 				a.searching = false
 				a.search.Blur()
+				a.returnView = a.view
 				return a, func() tea.Msg { return gotoNeighborhoodMsg{name: sel.Name} }
 			}
 		}
@@ -233,25 +248,40 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "enter":
 			a.palette = false
 			if a.paletteSel == 0 {
-				return a, loadCandidatesCmd(a.client)
+				if a.findings.active.Source == "" || a.findings.active.Sink == "" {
+					a.statusHint = "choose an evidence row first"
+					return a, nil
+				}
+				a.view = viewReaches
+				return a, loadReachesCmd(a.client, a.findings.active)
 			}
 			if a.paletteSel == 1 {
-				a.searching = true
-				a.search.SetValue("")
-				a.search.Focus()
-				return a, textinput.Blink
+				if a.findings.active.Sink == "" {
+					a.statusHint = "choose an evidence row first"
+					return a, nil
+				}
+				a.returnView = a.view
+				return a, loadToolCmd(a.client, "sources_of", map[string]any{"sink": a.findings.active.Sink})
 			}
 			if a.paletteSel == 2 {
-				a.view = viewTree
-				return a, a.tree.open(&a, "")
+				if a.neigh.name == "" {
+					a.statusHint = "open a symbol first, then flow from its neighborhood"
+					return a, nil
+				}
+				a.returnView = a.view
+				return a, loadToolCmd(a.client, "flow", map[string]any{"seed": a.neigh.name, "limit": 200})
 			}
 			if a.paletteSel == 3 {
-				a.view = viewOverview
-				return a, nil
+				a.returnView = a.view
+				return a, loadCandidatesCmd(a.client)
 			}
+			a.statusHint = "graph switching is not exposed by the current client session"
 			return a, nil
 		}
 		return a, nil
+	}
+	if a.statusHint != "" {
+		a.statusHint = ""
 	}
 
 	switch msg.String() {
@@ -263,6 +293,7 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.paletteSel = 0
 		return a, nil
 	case "tab":
+		a.returnView = a.view
 		return a, loadCandidatesCmd(a.client)
 	case "ctrl+c", "q":
 		return a, tea.Quit
@@ -291,6 +322,15 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.view = viewFindings
 			return a, nil
 		}
+		if a.view == viewFindings {
+			a.view = a.returnView
+			return a, nil
+		}
+		if a.view == viewNeighborhood && a.returnView != viewOverview {
+			a.view = a.returnView
+			a.err = nil
+			return a, nil
+		}
 		if a.view != viewOverview {
 			a.view = viewOverview
 			a.err = nil
@@ -308,6 +348,11 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case viewTree:
 		return a, a.tree.update(&a, msg)
 	case viewNeighborhood:
+		if msg.String() == "r" || msg.String() == "s" {
+			a.findings.active = mcp.Candidate{Entrypoint: a.neigh.name, Source: a.neigh.name, Sink: a.neigh.name}
+			a.view = viewSkeleton
+			return a, loadSkeletonCmd(a.client, a.findings.active)
+		}
 		return a, a.neigh.update(&a, msg)
 	case viewFindings:
 		return a, a.findings.update(&a, msg)
@@ -326,6 +371,10 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if msg.String() == "s" {
 			a.view = viewSkeleton
 			return a, loadSkeletonCmd(a.client, a.findings.active)
+		}
+	case viewToolResult:
+		if msg.String() == "esc" {
+			a.view = a.returnView
 		}
 	}
 	return a, nil
@@ -365,6 +414,8 @@ func (a App) View() string {
 			body = a.findings.reachesView(&a, bodyHeight)
 		case viewSkeleton:
 			body = a.findings.skeletonView(&a, bodyHeight)
+		case viewToolResult:
+			body = a.toolView(bodyHeight)
 		}
 	}
 	body = lipgloss.NewStyle().Height(bodyHeight).MaxHeight(bodyHeight).Render(body)
@@ -422,6 +473,9 @@ func (a App) renderHeader() string {
 }
 
 func (a App) renderStatus() string {
+	if a.statusHint != "" {
+		return stStatusBar.Width(a.width).Render(stAmber.Render(" "+a.statusHint) + stDim.Render("  · press esc to dismiss"))
+	}
 	var hints string
 	switch a.view {
 	case viewOverview:
@@ -430,7 +484,7 @@ func (a App) renderStatus() string {
 		hints = key("↑↓", "move/scroll") + key("→", "expand/select symbol") + key("b", "full source") + key("enter", "see symbol map")
 	case viewNeighborhood:
 		hints = key("enter", "open selected") + key("b", "full body/preview") + key("↑↓", "move/scroll") + key("tab", "switch side") + key("[ ]", "back/forward")
-	case viewFindings, viewFindingDetail, viewReaches, viewSkeleton:
+	case viewFindings, viewFindingDetail, viewReaches, viewSkeleton, viewToolResult:
 		hints = key("enter", "inspect") + key("r", "witness path") + key("s", "skeleton") + key("esc", "back")
 	}
 	label := "NAVIGATE"
@@ -500,7 +554,7 @@ func (a App) overlayHelp(base string) string {
 }
 
 func (a App) overlayPalette(base string) string {
-	items := []string{"review candidates — evidence to inspect", "find a symbol — search the graph", "open source tree", "return to overview", "help"}
+	items := []string{"reaches        witness path from a source to a sink", "sources_of     reverse cone into a sink", "flow           forward cone from a value", "candidates     evidence to review", "load_graph     switch the loaded graph"}
 	var b strings.Builder
 	fmt.Fprintln(&b, stCyanB.Render(":")+" "+stBright.Render("command palette"))
 	for i, item := range items {

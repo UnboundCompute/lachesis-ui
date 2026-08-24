@@ -82,6 +82,11 @@ type skeletonLoadedMsg struct {
 	candidate mcp.Candidate
 	data      map[string]any
 }
+type toolResultMsg struct {
+	name string
+	body string
+	err  error
+}
 
 // ---- commands (client calls, off the UI goroutine) ------------------------
 
@@ -230,6 +235,16 @@ func loadSkeletonCmd(c *mcp.Client, cand mcp.Candidate) tea.Cmd {
 			return errMsg{err}
 		}
 		return skeletonLoadedMsg{cand, d}
+	}
+}
+
+func loadToolCmd(c *mcp.Client, name string, args map[string]any) tea.Cmd {
+	return func() tea.Msg {
+		raw, err := c.Call(name, args)
+		if err != nil {
+			return toolResultMsg{name: name, err: err}
+		}
+		return toolResultMsg{name: name, body: string(raw)}
 	}
 }
 
