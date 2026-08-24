@@ -63,7 +63,7 @@ layout the binary already knows how to discover.
 
 ## Install
 
-### One command (pulls and builds the whole stack)
+### One command (installs the verified whole stack)
 
 ```sh
 git clone https://github.com/UnboundCompute/lachesis-ui
@@ -71,7 +71,7 @@ cd lachesis-ui
 ./scripts/install.sh
 ```
 
-This clones and builds:
+This clones the engine and catalog and installs the checksum-verified UI release:
 
 | piece | repo | role |
 |-------|------|------|
@@ -95,10 +95,11 @@ and lays them out as:
 The installer also vendors Lachesis's pinned TypeScript compiler, so the resulting
 stack can analyze TypeScript without a separate Node/npm setup.
 
-Re-running `install.sh` updates the checkouts in place. Requirements: `git` and
-`python3` (3.10–3.12 are the engine's release-tested versions). Source installs
-also need Go 1.24.2+ to build the binary; when using a downloaded release binary,
-set `LACHESIS_UI_BINARY` and no Go toolchain is required. Verify newer Python
+Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
+`curl`, a SHA-256 verifier, and `python3` (3.10–3.12 are the engine's
+release-tested versions). The default path does not require Go. Contributor source
+installs need Go 1.24.2+; select that path explicitly with
+`LACHESIS_UI_INSTALL_MODE=source`. Verify newer Python
 versions against the engine/Kùzu dependency set before using them in production.
 The installer takes an atomic lock, so concurrent invocations fail safely rather than
 mutating the shared virtualenv and checkouts at the same time.
@@ -139,8 +140,9 @@ checkout with local edits or untracked files:
 LACHESIS_REF=v0.1.7 ATROPOS_REF=v1.7.1 ./scripts/install.sh
 ```
 
-The installer pins its binary fallback to `v0.1.1`; set `LACHESIS_UI_REF` to a
-reviewed tag or commit when selecting another UI release.
+The installer downloads and verifies the UI release named by `LACHESIS_UI_REF`
+(default `v0.1.1`). Set `LACHESIS_UI_BINARY` to reuse a separately verified
+binary, or set `LACHESIS_UI_INSTALL_MODE=source` when selecting a source commit.
 
 Both release archives and `go install ...@vX.Y.Z` report the installed UI version
 from the release tag. Source builds retain the development fallback unless

@@ -27,9 +27,10 @@
 # Env overrides:
 #   LACHESIS_HOME   install root            (default: ~/.lachesis)
 #   PYTHON          python to build the venv (default: python3)
-#   LACHESIS_UI_REF release tag/commit for the go-install fallback (default: v0.1.1)
+#   LACHESIS_UI_REF release tag/commit for the UI (default: v0.1.1)
 #   LACHESIS_UI_VERSION version stamped into a source-built binary (default: 0.1.0)
 #   LACHESIS_UI_BINARY path to a downloaded release binary (skips the Go build)
+#   LACHESIS_UI_INSTALL_MODE binary (default) or source for contributor builds
 #   LACHESIS_BUILD_TIMEOUT maximum seconds for one generated graph build (default: 3600)
 #
 set -euo pipefail
@@ -81,6 +82,7 @@ if [ -f "$HERE/VERSION" ]; then
 fi
 LACHESIS_UI_VERSION="${LACHESIS_UI_VERSION:-$DEFAULT_UI_VERSION}"
 LACHESIS_UI_BINARY="${LACHESIS_UI_BINARY:-}"
+LACHESIS_UI_INSTALL_MODE="${LACHESIS_UI_INSTALL_MODE:-binary}"
 LACHESIS_BUILD_TIMEOUT="${LACHESIS_BUILD_TIMEOUT:-3600}"
 
 LACHESIS_REPO="https://github.com/UnboundCompute/lachesis.git"
@@ -107,6 +109,11 @@ validate_ref LACHESIS_REF "$LACHESIS_REF"
 validate_ref ATROPOS_REF "$ATROPOS_REF"
 validate_ref LACHESIS_UI_REF "$LACHESIS_UI_REF"
 
+case "$LACHESIS_UI_INSTALL_MODE" in
+  binary|source) ;;
+  *) die "LACHESIS_UI_INSTALL_MODE must be binary or source" ;;
+esac
+
 if [ "$LACHESIS_REF" = "main" ]; then
   warn "LACHESIS_REF=main is mutable; pin a reviewed engine tag or commit for reproducible installs"
 fi
@@ -127,7 +134,7 @@ if sys.version_info < (3, 10):
         f"Python 3.10+ is required (found {sys.version_info.major}.{sys.version_info.minor})"
     )
 PY
-if [ -z "$LACHESIS_UI_BINARY" ]; then
+if [ "$LACHESIS_UI_INSTALL_MODE" = "source" ] && [ -z "$LACHESIS_UI_BINARY" ]; then
   need go
   "$PYTHON" - "$(go version)" <<'PY'
 import re
@@ -232,17 +239,27 @@ cp "$HERE/scripts/doctor.sh" "$LACHESIS_HOME/doctor.sh"
 chmod +x "$LACHESIS_HOME/doctor.sh"
 
 # ---- 5. install or build the UI ------------------------------------------
+if [ -z "$LACHESIS_UI_BINARY" ] && [ "$LACHESIS_UI_INSTALL_MODE" = "binary" ]; then
+  case "$LACHESIS_UI_REF" in
+    v[0-9]*.[0-9]*.[0-9]*) ;;
+    *) die "binary UI install requires LACHESIS_UI_REF to be a release tag (for a commit/source build, set LACHESIS_UI_INSTALL_MODE=source)" ;;
+  esac
+  info "downloading and verifying UI release $LACHESIS_UI_REF"
+  LACHESIS_HOME="$LACHESIS_HOME" LACHESIS_UI_VERSION="$LACHESIS_UI_REF" \
+    "$HERE/scripts/install-ui-binary.sh"
+  LACHESIS_UI_BINARY="$BIN/lachesis-ui"
+fi
 if [ -n "$LACHESIS_UI_BINARY" ]; then
   [ -x "$LACHESIS_UI_BINARY" ] || die "LACHESIS_UI_BINARY is not executable: $LACHESIS_UI_BINARY"
   info "installing UI binary from $LACHESIS_UI_BINARY"
   cp "$LACHESIS_UI_BINARY" "$BIN/lachesis-ui"
   chmod +x "$BIN/lachesis-ui"
-elif [ -f "$HERE/main.go" ]; then
+elif [ "$LACHESIS_UI_INSTALL_MODE" = "source" ] && [ -f "$HERE/main.go" ]; then
   info "building lachesis-ui from source checkout"
   (cd "$HERE" && go build -trimpath \
     -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$LACHESIS_UI_VERSION" \
     -o "$BIN/lachesis-ui" .)
-else
+elif [ "$LACHESIS_UI_INSTALL_MODE" = "source" ]; then
   info "installing lachesis-ui via go install"
   GOBIN="$BIN" go install "github.com/UnboundCompute/lachesis-ui@$LACHESIS_UI_REF"
 fi
