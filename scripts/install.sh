@@ -28,7 +28,7 @@
 #   LACHESIS_HOME   install root            (default: ~/.lachesis)
 #   PYTHON          python to build the venv (default: python3)
 #   LACHESIS_UI_REF release tag/commit for the UI (default: v0.1.1)
-#   LACHESIS_UI_VERSION version stamped into a source-built binary (default: 0.1.0)
+#   LACHESIS_UI_VERSION version stamped into a source-built binary (default: VERSION)
 #   LACHESIS_UI_BINARY path to a downloaded release binary (skips the Go build)
 #   LACHESIS_UI_INSTALL_MODE binary (default) or source for contributor builds
 #   LACHESIS_BUILD_TIMEOUT maximum seconds for one generated graph build (default: 3600)
