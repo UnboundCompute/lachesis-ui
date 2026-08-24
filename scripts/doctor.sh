@@ -40,10 +40,12 @@ import sys
 from pathlib import Path
 
 data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-required = {"schema_version", "product", "engine", "catalog", "ui"}
+required = {"schema_version", "evidence_schema_version", "product", "engine", "catalog", "ui"}
 missing = sorted(required - data.keys())
 if missing:
     raise SystemExit("missing fields: " + ", ".join(missing))
+if data["evidence_schema_version"] != 1:
+    raise SystemExit("unsupported evidence schema version: " + str(data["evidence_schema_version"]))
 PY
   then
     pass "stack manifest is valid"

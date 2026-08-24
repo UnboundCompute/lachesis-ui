@@ -105,7 +105,8 @@ The installer takes an atomic lock, so concurrent invocations fail safely rather
 mutating the shared virtualenv and checkouts at the same time.
 
 Each install writes `~/.lachesis/stack-manifest.json`. It records the requested refs and
-the resolved engine and Atropos commits actually installed, plus the UI ref/version. Include
+the resolved engine and Atropos commits actually installed, plus the UI ref/version and the
+shared evidence schema version. Include
 this receipt in bug reports and preserve it with a graph or evidence artifact when you need
 to reproduce a result; a tag name by itself is not sufficient provenance.
 

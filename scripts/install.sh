@@ -285,6 +285,7 @@ from pathlib import Path
  ui_ref, ui_sha, ui_version) = sys.argv[1:]
 manifest = {
     "schema_version": 1,
+    "evidence_schema_version": 1,
     "product": "lachesis-ui-stack",
     "engine": {"repository": "UnboundCompute/lachesis", "requested_ref": engine_ref, "resolved_commit": engine_sha},
     "catalog": {"repository": "UnboundCompute/atropos", "requested_ref": catalog_ref, "resolved_commit": catalog_sha},
