@@ -35,6 +35,10 @@ The release workflow extracts the native Linux amd64 archive and performs that v
 smoke test against the extracted binary; the other targets are cross-compiled and
 verified by their reproducible archive hashes.
 
+The UI startup contract also requires the engine to report MCP protocol
+`2024-11-05` and a non-empty engine version. Keep this check in the clean-machine
+TUI smoke test when changing the engine/client boundary.
+
 Archive ordering, timestamps, ownership metadata, and the gzip header are normalized
 from the tagged commit, so rebuilding the same tag produces identical archive bytes.
 

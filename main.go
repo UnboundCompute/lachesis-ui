@@ -57,6 +57,7 @@ func main() {
 			"  LACHESIS_PYTHON=/path/to/python lachesis-ui", err))
 	}
 	defer client.Close()
+	fmt.Fprintf(os.Stderr, "lachesis-ui: engine %s (%s)\n", client.Server.Version, client.Server.Name)
 
 	p := tea.NewProgram(ui.New(client, graphName), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {

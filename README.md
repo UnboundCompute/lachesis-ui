@@ -110,6 +110,11 @@ terminal waiting forever. For unusually expensive local graphs, override it with
 duration such as `LACHESIS_UI_REQUEST_TIMEOUT=5m`; a timed-out request terminates the
 engine and shows the recent engine diagnostics.
 
+At startup the UI validates the MCP protocol and requires the engine to report its
+version, then prints the connected engine identity. A mismatched protocol fails with
+an actionable message instead of opening a partially compatible screen; engine and
+Atropos refs should still be pinned as a tested pair.
+
 To keep the stack outside your home directory (for example, on a CI volume), set
 `LACHESIS_HOME`; the generated graph helper and UI discovery use the same root:
 
