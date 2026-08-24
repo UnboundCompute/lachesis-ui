@@ -381,7 +381,12 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.view = viewSkeleton
 			return a, loadSkeletonCmd(a.client, a.findings.active)
 		case "k":
-			a.statusHint = "marked for review in this session (no persistence tool exists)"
+			if a.findings.active.ID == "" {
+				a.statusHint = "this evidence row has no review id"
+				return a, nil
+			}
+			a.statusHint = "saving review decision for this session"
+			return a, reviewCandidateCmd(a.client, a.findings.active.ID, "confirmed")
 		}
 	case viewReaches:
 		if msg.String() == "s" {

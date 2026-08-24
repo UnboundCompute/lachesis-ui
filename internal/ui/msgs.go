@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -256,6 +258,19 @@ func loadScanCmd(c *mcp.Client) tea.Cmd {
 			return errMsg{err}
 		}
 		return scanLoadedMsg{d}
+	}
+}
+
+func reviewCandidateCmd(c *mcp.Client, id, decision string) tea.Cmd {
+	return func() tea.Msg {
+		raw, err := c.Call("review", map[string]any{"candidate_id": id, "decision": decision})
+		if err != nil {
+			return errMsg{err}
+		}
+		if !json.Valid(raw) {
+			return errMsg{fmt.Errorf("review returned invalid JSON")}
+		}
+		return toolResultMsg{name: "review", body: string(raw)}
 	}
 }
 
