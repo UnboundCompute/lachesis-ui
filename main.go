@@ -27,7 +27,7 @@ func main() {
 	flag.Parse()
 
 	if *versionF {
-		fmt.Printf("lachesis-ui %s\n", mcp.Version)
+		fmt.Printf("lachesis-ui %s\n", mcp.BuildVersion())
 		return
 	}
 
@@ -57,6 +57,7 @@ func main() {
 			"  LACHESIS_PYTHON=/path/to/python lachesis-ui", err))
 	}
 	defer client.Close()
+	fmt.Fprintf(os.Stderr, "lachesis-ui: engine %s (%s)\n", client.Server.Version, client.Server.Name)
 
 	p := tea.NewProgram(ui.New(client, graphName), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
@@ -87,7 +88,7 @@ func resolveGraph(flagVal string, args []string) (path, name string, err error) 
 	}
 	graphs := mcp.ListGraphs()
 	if len(graphs) == 0 {
-		return "", "", fmt.Errorf("no graphs found in %s\n\nBuild one first:\n  lachesis index <source_dir>\nor pass a path:\n  lachesis-ui --graph <path.kuzu>", mcp.GraphsDir())
+		return "", "", fmt.Errorf("no graphs found in %s\n\nBuild one first:\n  %s <source_dir>\nor pass a path:\n  lachesis-ui --graph <path.kuzu>", mcp.GraphsDir(), mcp.BuildGraphHelper())
 	}
 	return graphs[0].Path, graphs[0].Name, nil
 }
@@ -123,7 +124,8 @@ Flags:
   --version        print version and exit
 
 Keys (in-app):
-  1/o overview   2/t tree   3 neighborhood   / search   q quit
+  1/o overview   2/t tree   3 neighborhood   f scan   h hubs
+  tab findings  / search   : commands   ? help   q quit
 `)
 }
 

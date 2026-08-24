@@ -18,6 +18,8 @@
 #   ~/.lachesis/graphs         where built graphs land (UI's default search dir)
 #   ~/.lachesis/bin/lachesis-ui   the built UI binary
 #   ~/.lachesis/build-graph.sh    helper: build a graph from any source tree
+#   ~/.lachesis/stack-manifest.json exact resolved refs for the installed stack
+#   ~/.lachesis/doctor.sh        lightweight installation health check
 #
 # Re-running is safe: it updates existing clean checkouts to the requested refs
 # instead of silently retaining an older branch or commit.
@@ -25,8 +27,10 @@
 # Env overrides:
 #   LACHESIS_HOME   install root            (default: ~/.lachesis)
 #   PYTHON          python to build the venv (default: python3)
-#   LACHESIS_UI_REF release tag/commit for the go-install fallback (default: v0.1.0)
-#   LACHESIS_UI_VERSION version stamped into a source-built binary (default: 0.1.0)
+#   LACHESIS_UI_REF release tag/commit for the UI (default: v0.1.1)
+#   LACHESIS_UI_VERSION version stamped into a source-built binary (default: VERSION)
+#   LACHESIS_UI_BINARY path to a downloaded release binary (skips the Go build)
+#   LACHESIS_UI_INSTALL_MODE binary (default) or source for contributor builds
 #   LACHESIS_BUILD_TIMEOUT maximum seconds for one generated graph build (default: 3600)
 #
 set -euo pipefail
@@ -69,14 +73,16 @@ VENV="$LACHESIS_HOME/venv"
 BIN="$LACHESIS_HOME/bin"
 GRAPHS="$LACHESIS_HOME/graphs"
 PYTHON="${PYTHON:-python3}"
-LACHESIS_REF="${LACHESIS_REF:-main}"
-ATROPOS_REF="${ATROPOS_REF:-main}"
-LACHESIS_UI_REF="${LACHESIS_UI_REF:-v0.1.0}"
+LACHESIS_REF="${LACHESIS_REF:-v0.1.7}"
+ATROPOS_REF="${ATROPOS_REF:-v1.7.1}"
+LACHESIS_UI_REF="${LACHESIS_UI_REF:-v0.1.1}"
 DEFAULT_UI_VERSION="0.1.0"
 if [ -f "$HERE/VERSION" ]; then
   DEFAULT_UI_VERSION="$(tr -d '[:space:]' < "$HERE/VERSION")"
 fi
 LACHESIS_UI_VERSION="${LACHESIS_UI_VERSION:-$DEFAULT_UI_VERSION}"
+LACHESIS_UI_BINARY="${LACHESIS_UI_BINARY:-}"
+LACHESIS_UI_INSTALL_MODE="${LACHESIS_UI_INSTALL_MODE:-binary}"
 LACHESIS_BUILD_TIMEOUT="${LACHESIS_BUILD_TIMEOUT:-3600}"
 
 LACHESIS_REPO="https://github.com/UnboundCompute/lachesis.git"
@@ -103,6 +109,11 @@ validate_ref LACHESIS_REF "$LACHESIS_REF"
 validate_ref ATROPOS_REF "$ATROPOS_REF"
 validate_ref LACHESIS_UI_REF "$LACHESIS_UI_REF"
 
+case "$LACHESIS_UI_INSTALL_MODE" in
+  binary|source) ;;
+  *) die "LACHESIS_UI_INSTALL_MODE must be binary or source" ;;
+esac
+
 if [ "$LACHESIS_REF" = "main" ]; then
   warn "LACHESIS_REF=main is mutable; pin a reviewed engine tag or commit for reproducible installs"
 fi
@@ -123,8 +134,9 @@ if sys.version_info < (3, 10):
         f"Python 3.10+ is required (found {sys.version_info.major}.{sys.version_info.minor})"
     )
 PY
-need go
-"$PYTHON" - "$(go version)" <<'PY'
+if [ "$LACHESIS_UI_INSTALL_MODE" = "source" ] && [ -z "$LACHESIS_UI_BINARY" ]; then
+  need go
+  "$PYTHON" - "$(go version)" <<'PY'
 import re
 import sys
 
@@ -137,6 +149,7 @@ if found < (1, 24, 2):
         f"Go 1.24.2+ is required (found {found[0]}.{found[1]}.{found[2]})"
     )
 PY
+fi
 
 mkdir -p "$SRC" "$BIN" "$GRAPHS"
 
@@ -222,17 +235,64 @@ export ATROPOS_ROOT="\${ATROPOS_ROOT:-$SRC/atropos}"
 echo "\$OUT"
 HELPER
 chmod +x "$LACHESIS_HOME/build-graph.sh"
+cp "$HERE/scripts/doctor.sh" "$LACHESIS_HOME/doctor.sh"
+chmod +x "$LACHESIS_HOME/doctor.sh"
 
-# ---- 5. build the UI ------------------------------------------------------
-if [ -f "$HERE/main.go" ]; then
+# ---- 5. install or build the UI ------------------------------------------
+if [ -z "$LACHESIS_UI_BINARY" ] && [ "$LACHESIS_UI_INSTALL_MODE" = "binary" ]; then
+  case "$LACHESIS_UI_REF" in
+    v[0-9]*.[0-9]*.[0-9]*) ;;
+    *) die "binary UI install requires LACHESIS_UI_REF to be a release tag (for a commit/source build, set LACHESIS_UI_INSTALL_MODE=source)" ;;
+  esac
+  info "downloading and verifying UI release $LACHESIS_UI_REF"
+  LACHESIS_HOME="$LACHESIS_HOME" LACHESIS_UI_VERSION="$LACHESIS_UI_REF" \
+    "$HERE/scripts/install-ui-binary.sh"
+  LACHESIS_UI_BINARY="$BIN/lachesis-ui"
+fi
+if [ -n "$LACHESIS_UI_BINARY" ]; then
+  [ -x "$LACHESIS_UI_BINARY" ] || die "LACHESIS_UI_BINARY is not executable: $LACHESIS_UI_BINARY"
+  info "installing UI binary from $LACHESIS_UI_BINARY"
+  cp "$LACHESIS_UI_BINARY" "$BIN/lachesis-ui"
+  chmod +x "$BIN/lachesis-ui"
+elif [ "$LACHESIS_UI_INSTALL_MODE" = "source" ] && [ -f "$HERE/main.go" ]; then
   info "building lachesis-ui from source checkout"
   (cd "$HERE" && go build -trimpath \
     -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$LACHESIS_UI_VERSION" \
     -o "$BIN/lachesis-ui" .)
-else
+elif [ "$LACHESIS_UI_INSTALL_MODE" = "source" ]; then
   info "installing lachesis-ui via go install"
   GOBIN="$BIN" go install "github.com/UnboundCompute/lachesis-ui@$LACHESIS_UI_REF"
 fi
+
+# Leave an inspectable receipt beside the installation. The requested refs alone
+# are not enough evidence: a release tag can move, and a shallow fetch resolves
+# the actual commit that the user received. Keep this file deterministic so it is
+# useful in bug reports and can be diffed across upgrades.
+ENGINE_SHA="$(git -C "$SRC/lachesis" rev-parse HEAD)"
+CATALOG_SHA="$(git -C "$SRC/atropos" rev-parse HEAD)"
+UI_SHA=""
+if [ -z "$LACHESIS_UI_BINARY" ] && git -C "$HERE" rev-parse HEAD >/dev/null 2>&1; then
+  UI_SHA="$(git -C "$HERE" rev-parse HEAD)"
+fi
+"$PYTHON" - "$LACHESIS_HOME/stack-manifest.json" \
+  "$LACHESIS_REF" "$ENGINE_SHA" "$ATROPOS_REF" "$CATALOG_SHA" \
+  "$LACHESIS_UI_REF" "$UI_SHA" "$LACHESIS_UI_VERSION" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+(output, engine_ref, engine_sha, catalog_ref, catalog_sha,
+ ui_ref, ui_sha, ui_version) = sys.argv[1:]
+manifest = {
+    "schema_version": 1,
+    "evidence_schema_version": 1,
+    "product": "lachesis-ui-stack",
+    "engine": {"repository": "UnboundCompute/lachesis", "requested_ref": engine_ref, "resolved_commit": engine_sha},
+    "catalog": {"repository": "UnboundCompute/atropos", "requested_ref": catalog_ref, "resolved_commit": catalog_sha},
+    "ui": {"repository": "UnboundCompute/lachesis-ui", "requested_ref": ui_ref, "resolved_commit": ui_sha or None, "version": ui_version},
+}
+Path(output).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+PY
 
 # ---- done -----------------------------------------------------------------
 cat <<DONE
@@ -242,6 +302,8 @@ $(info 'stack ready')
   engine   $SRC/lachesis   (venv: $VENV)
   catalog  $SRC/atropos
   UI       $BIN/lachesis-ui
+  receipt  $LACHESIS_HOME/stack-manifest.json
+  doctor   $LACHESIS_HOME/doctor.sh
 
 Add the UI to your PATH:
 

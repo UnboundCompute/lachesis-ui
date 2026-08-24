@@ -11,15 +11,16 @@ front, a source tree with per-file symbol outlines, and a symbol's neighborhood
 (who reaches it, what it uses) grouped by module instead of dumped as a flat
 list. It is navigation-driven, not a chat box. Every move is a keystroke.
 
-> **Status: v1, navigation only.** Finding and scanning surfaces (the candidate
-> registry, taint) land in a later release. This version is the reader.
+> **Status: active development.** Navigation, scan, findings, witness, skeleton,
+> and centrality review surfaces are available; graph capability frontiers are
+> shown explicitly in the UI and tracked in `docs/design-audit.md`.
 
 ---
 
 ## Screens
 
-Three screens, each a different lens on the same graph (shown here over the curl
-source tree).
+The UI combines navigation and evidence review screens, each a different lens
+on the same graph.
 
 **Overview**, the map: subsystems ranked by how much of the spine they hold,
 the entry points, and the highest-degree nodes as a "start here".
@@ -62,7 +63,7 @@ layout the binary already knows how to discover.
 
 ## Install
 
-### One command (pulls and builds the whole stack)
+### One command (installs the verified whole stack)
 
 ```sh
 git clone https://github.com/UnboundCompute/lachesis-ui
@@ -70,7 +71,7 @@ cd lachesis-ui
 ./scripts/install.sh
 ```
 
-This clones and builds:
+This clones the engine and catalog and installs the checksum-verified UI release:
 
 | piece | repo | role |
 |-------|------|------|
@@ -87,17 +88,27 @@ and lays them out as:
 ~/.lachesis/graphs            built graphs land here  (the UI's default search dir)
 ~/.lachesis/bin/lachesis-ui   the UI binary
 ~/.lachesis/build-graph.sh    helper to build a graph from any source tree
+~/.lachesis/stack-manifest.json resolved engine/catalog/UI receipt
+~/.lachesis/doctor.sh         lightweight installation health check
 ```
 
 The installer also vendors Lachesis's pinned TypeScript compiler, so the resulting
 stack can analyze TypeScript without a separate Node/npm setup.
 
 Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
-`python3` (3.10–3.12 are the engine's release-tested versions), and Go 1.24.2+ to
-build the binary. Verify newer Python versions against the engine/Kùzu dependency set
-before using them in production.
+`curl`, a SHA-256 verifier, and `python3` (3.10–3.12 are the engine's
+release-tested versions). The default path does not require Go. Contributor source
+installs need Go 1.24.2+; select that path explicitly with
+`LACHESIS_UI_INSTALL_MODE=source`. Verify newer Python
+versions against the engine/Kùzu dependency set before using them in production.
 The installer takes an atomic lock, so concurrent invocations fail safely rather than
 mutating the shared virtualenv and checkouts at the same time.
+
+Each install writes `~/.lachesis/stack-manifest.json`. It records the requested refs and
+the resolved engine and Atropos commits actually installed, plus the UI ref/version and the
+shared evidence schema version. Include
+this receipt in bug reports and preserve it with a graph or evidence artifact when you need
+to reproduce a result; a tag name by itself is not sufficient provenance.
 
 Unattended installs fail fast on stalled network transfers: Git aborts after 60 seconds
 below its low-speed threshold, and pip uses a 60-second default index/download timeout
@@ -109,6 +120,11 @@ terminal waiting forever. For unusually expensive local graphs, override it with
 duration such as `LACHESIS_UI_REQUEST_TIMEOUT=5m`; a timed-out request terminates the
 engine and shows the recent engine diagnostics.
 
+At startup the UI validates the MCP protocol and requires the engine to report its
+version, then prints the connected engine identity. A mismatched protocol fails with
+an actionable message instead of opening a partially compatible screen; engine and
+Atropos refs should still be pinned as a tested pair.
+
 To keep the stack outside your home directory (for example, on a CI volume), set
 `LACHESIS_HOME`; the generated graph helper and UI discovery use the same root:
 
@@ -116,17 +132,22 @@ To keep the stack outside your home directory (for example, on a CI volume), set
 LACHESIS_HOME=/var/cache/lachesis ./scripts/install.sh
 ```
 
-For reproducible deployments, pin the engine and catalog before installing (use
-reviewed release tags rather than mutable branches). Re-running the
-installer applies those refs to existing clean checkouts and refuses to touch a
+The installer defaults to the reviewed engine `v0.1.7`, Atropos `v1.7.1`, and UI
+`v0.1.1` releases. For strongest reproducibility, pin the engine and catalog to
+reviewed immutable SHAs before installing. Re-running the installer applies those refs to existing clean checkouts and refuses to touch a
 checkout with local edits or untracked files:
 
 ```sh
-LACHESIS_REF=<lachesis-release-tag> ATROPOS_REF=<atropos-release-tag> ./scripts/install.sh
+LACHESIS_REF=v0.1.7 ATROPOS_REF=v1.7.1 ./scripts/install.sh
 ```
 
-The installer pins its binary fallback to `v0.1.0`; set `LACHESIS_UI_REF` to a
-reviewed tag or commit when selecting another UI release.
+The installer downloads and verifies the UI release named by `LACHESIS_UI_REF`
+(default `v0.1.1`). Set `LACHESIS_UI_BINARY` to reuse a separately verified
+binary, or set `LACHESIS_UI_INSTALL_MODE=source` when selecting a source commit.
+
+Both release archives and `go install ...@vX.Y.Z` report the installed UI version
+from the release tag. Source builds retain the development fallback unless
+`LACHESIS_UI_VERSION` or the release build ldflag sets it explicitly.
 
 The generated `build-graph.sh` helper bounds each frontend invocation to 3,600
 seconds by default. Set `LACHESIS_BUILD_TIMEOUT` before running the installer to
@@ -137,6 +158,13 @@ a version other than the default `0.1.0`:
 
 ```sh
 LACHESIS_UI_VERSION=1.2.0 ./scripts/install.sh
+```
+
+To use a downloaded, checksum-verified UI release archive without installing Go,
+extract its `lachesis-ui` binary and pass it to the same stack installer:
+
+```sh
+LACHESIS_UI_BINARY=/path/to/lachesis-ui ./scripts/install.sh
 ```
 
 Then put the binary on your PATH:
@@ -157,11 +185,20 @@ go build -trimpath -o "$HOME/.lachesis/bin/lachesis-ui" .
 For a tagged release published to the Go module proxy, use:
 
 ```sh
-go install github.com/UnboundCompute/lachesis-ui@v0.1.0
+go install github.com/UnboundCompute/lachesis-ui@v0.1.1
 ```
 
-Replace `v0.1.0` with the reviewed release tag you intend to deploy; avoid
+Replace `v0.1.1` with the reviewed release tag you intend to deploy; avoid
 `@latest` in production automation.
+
+On macOS or Linux, the repository also provides a checksum-verifying bootstrap
+for the published archive. It detects the host architecture and installs the
+binary under `~/.lachesis/bin` without requiring Go:
+
+```sh
+LACHESIS_UI_VERSION=v0.1.1 ./scripts/install-ui-binary.sh
+export PATH="$HOME/.lachesis/bin:$PATH"
+```
 
 ### Not pip or npm
 
@@ -169,7 +206,8 @@ Replace `v0.1.0` with the reviewed release tag you intend to deploy; avoid
 engine it drives is Python (`python -m pip install -e` from the checkout, which
 `install.sh` does for you). Tagged releases build Linux and macOS binaries for
 amd64 and arm64 in the `release binaries` workflow. Download the matching archive
-and verify its SHA-256 checksum before unpacking it:
+from the GitHub Release for the tag and verify its SHA-256 checksum before unpacking
+it:
 
 ```sh
 sha256sum -c SHA256SUMS --ignore-missing
@@ -202,6 +240,13 @@ rejected so output stays under `~/.lachesis/graphs` (or your configured
 
 The first screen you touch triggers a one-time graph load (a few seconds for a
 large tree); after that every move is instant.
+
+If setup fails or the environment changes, run the health check without building
+or scanning a graph:
+
+```sh
+~/.lachesis/doctor.sh
+```
 
 ---
 

@@ -16,6 +16,10 @@ import (
 type gotoOverviewMsg struct{}
 type gotoTreeMsg struct{ path string } // "" = repo root
 type gotoNeighborhoodMsg struct{ name string }
+type gotoFindingsMsg struct{}
+type gotoFindingDetailMsg struct{ candidate mcp.Candidate }
+type gotoReachesMsg struct{ candidate mcp.Candidate }
+type gotoSkeletonMsg struct{ candidate mcp.Candidate }
 
 type errMsg struct{ err error }
 
@@ -28,6 +32,7 @@ type overviewLoadedMsg struct {
 	hubs  []mcp.Hub
 	dirs  []mcp.FolderEntry // top-level subsystems (dirs under root)
 	files int
+	meta  map[string]any
 }
 
 type folderLoadedMsg struct {
@@ -65,6 +70,26 @@ type searchResultsMsg struct {
 	total int
 }
 
+type candidatesLoadedMsg struct{ rows []mcp.Candidate }
+type candidateDetailLoadedMsg struct {
+	candidate mcp.Candidate
+	data      map[string]any
+}
+type reachesLoadedMsg struct {
+	candidate mcp.Candidate
+	data      map[string]any
+}
+type skeletonLoadedMsg struct {
+	candidate mcp.Candidate
+	data      map[string]any
+}
+type toolResultMsg struct {
+	name string
+	body string
+	err  error
+}
+type scanLoadedMsg struct{ data map[string]any }
+
 // ---- commands (client calls, off the UI goroutine) ------------------------
 
 func loadOverviewCmd(c *mcp.Client) tea.Cmd {
@@ -91,7 +116,8 @@ func loadOverviewCmd(c *mcp.Client) tea.Cmd {
 				}
 			}
 		}
-		return overviewLoadedMsg{root: displayRoot, hubs: hubs, dirs: dirs, files: files}
+		meta, _ := c.Coverage()
+		return overviewLoadedMsg{root: displayRoot, hubs: hubs, dirs: dirs, files: files, meta: meta}
 	}
 }
 
@@ -175,6 +201,63 @@ func searchCmd(c *mcp.Client, query string) tea.Cmd {
 			return errMsg{err}
 		}
 		return searchResultsMsg{query: query, hits: hits, total: total}
+	}
+}
+
+func loadCandidatesCmd(c *mcp.Client) tea.Cmd {
+	return func() tea.Msg {
+		rows, err := c.Candidates(80)
+		if err != nil {
+			return errMsg{err}
+		}
+		return candidatesLoadedMsg{rows}
+	}
+}
+func loadCandidateDetailCmd(c *mcp.Client, cand mcp.Candidate) tea.Cmd {
+	return func() tea.Msg {
+		d, err := c.CandidateDetail(cand.ID)
+		if err != nil {
+			return errMsg{err}
+		}
+		return candidateDetailLoadedMsg{cand, d}
+	}
+}
+func loadReachesCmd(c *mcp.Client, cand mcp.Candidate) tea.Cmd {
+	return func() tea.Msg {
+		d, err := c.Reaches(cand.Source, cand.Sink)
+		if err != nil {
+			return errMsg{err}
+		}
+		return reachesLoadedMsg{cand, d}
+	}
+}
+func loadSkeletonCmd(c *mcp.Client, cand mcp.Candidate) tea.Cmd {
+	return func() tea.Msg {
+		d, err := c.Skeleton(cand.Entrypoint, cand.ID)
+		if err != nil {
+			return errMsg{err}
+		}
+		return skeletonLoadedMsg{cand, d}
+	}
+}
+
+func loadToolCmd(c *mcp.Client, name string, args map[string]any) tea.Cmd {
+	return func() tea.Msg {
+		raw, err := c.Call(name, args)
+		if err != nil {
+			return toolResultMsg{name: name, err: err}
+		}
+		return toolResultMsg{name: name, body: string(raw)}
+	}
+}
+
+func loadScanCmd(c *mcp.Client) tea.Cmd {
+	return func() tea.Msg {
+		d, err := c.Scan(40)
+		if err != nil {
+			return errMsg{err}
+		}
+		return scanLoadedMsg{d}
 	}
 }
 

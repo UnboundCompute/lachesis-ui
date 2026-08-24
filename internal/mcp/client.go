@@ -39,6 +39,8 @@ type ServerInfo struct {
 	Version string `json:"version"`
 }
 
+const supportedMCPProtocol = "2024-11-05"
+
 type rpcResponse struct {
 	ID     int             `json:"id"`
 	Result json.RawMessage `json:"result"`
@@ -132,16 +134,25 @@ func startupTimeout() time.Duration {
 func (c *Client) initialize() error {
 	raw, err := c.request("initialize", map[string]any{
 		"protocolVersion": "2024-11-05",
-		"clientInfo":      map[string]any{"name": "lachesis-ui", "version": Version},
+		"clientInfo":      map[string]any{"name": "lachesis-ui", "version": BuildVersion()},
 		"capabilities":    map[string]any{},
 	})
 	if err != nil {
 		return fmt.Errorf("initialize: %w", err)
 	}
 	var res struct {
-		ServerInfo ServerInfo `json:"serverInfo"`
+		ProtocolVersion string     `json:"protocolVersion"`
+		ServerInfo      ServerInfo `json:"serverInfo"`
 	}
-	_ = json.Unmarshal(raw, &res)
+	if err := json.Unmarshal(raw, &res); err != nil {
+		return fmt.Errorf("initialize: decode handshake: %w", err)
+	}
+	if res.ProtocolVersion != supportedMCPProtocol {
+		return fmt.Errorf("initialize: unsupported MCP protocol %q (UI supports %q); install a compatible Lachesis engine", res.ProtocolVersion, supportedMCPProtocol)
+	}
+	if res.ServerInfo.Version == "" {
+		return fmt.Errorf("initialize: engine did not report a version; install a released Lachesis engine and Atropos catalog")
+	}
 	c.Server = res.ServerInfo
 
 	// Best-effort per the spec; the server ignores the notification's absence.

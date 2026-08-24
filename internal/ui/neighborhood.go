@@ -106,6 +106,7 @@ func (m *neighModel) update(a *App, msg tea.KeyMsg) tea.Cmd {
 	case "enter":
 		if sym, ok := m.selected(); ok {
 			name := sym.Name
+			a.returnView = viewNeighborhood
 			return func() tea.Msg { return gotoNeighborhoodMsg{name: name} }
 		}
 	case "[":

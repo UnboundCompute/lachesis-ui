@@ -238,7 +238,13 @@ func (m *treeModel) update(a *App, msg tea.KeyMsg) tea.Cmd {
 				i = 0
 			}
 			name := m.decls[i].Name
+			a.returnView = viewTree
 			return func() tea.Msg { return gotoNeighborhoodMsg{name: name} }
+		}
+		return nil
+	case "s":
+		if name := m.selectedDeclName(); name != "" {
+			return func() tea.Msg { return gotoSkeletonMsg{candidate: mcp.Candidate{Entrypoint: name, Source: name}} }
 		}
 		return nil
 	case "left", "h":
@@ -249,6 +255,13 @@ func (m *treeModel) update(a *App, msg tea.KeyMsg) tea.Cmd {
 		return m.collapseOrParent(a)
 	}
 	return nil
+}
+
+func (m *treeModel) selectedDeclName() string {
+	if m.outlineFile == "" || len(m.decls) == 0 || m.declSel < 0 || m.declSel >= len(m.decls) {
+		return ""
+	}
+	return m.decls[m.declSel].Name
 }
 
 func (m *treeModel) move(a *App, delta int) tea.Cmd {

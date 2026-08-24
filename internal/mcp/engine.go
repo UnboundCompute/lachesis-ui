@@ -53,6 +53,20 @@ func GraphsDir() string {
 	return filepath.Join(home, ".lachesis", "graphs")
 }
 
+// BuildGraphHelper is the command installed alongside the graph directory by
+// scripts/install.sh. Keeping it here lets empty-state diagnostics use the same
+// install root as graph discovery, including custom LACHESIS_HOME setups.
+func BuildGraphHelper() string {
+	if root := os.Getenv("LACHESIS_HOME"); root != "" {
+		return filepath.Join(root, "build-graph.sh")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ".lachesis/build-graph.sh"
+	}
+	return filepath.Join(home, ".lachesis", "build-graph.sh")
+}
+
 // Graph is a discovered prebuilt graph store.
 type Graph struct {
 	Name string // display name, e.g. "curl"

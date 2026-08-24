@@ -27,16 +27,21 @@ On macOS, the equivalent verification command is:
 shasum -a 256 -c SHA256SUMS
 ```
 
-The workflow stamps each binary with the tag version; verify a downloaded binary with
-`./lachesis-ui --version` before promoting it.
+The workflow stamps each binary with the tag version; `go install ...@vTAG` also
+reports the module tag through Go build metadata. Verify a downloaded or installed
+binary with `./lachesis-ui --version` before promoting it.
 
 The release workflow extracts the native Linux amd64 archive and performs that version
 smoke test against the extracted binary; the other targets are cross-compiled and
 verified by their reproducible archive hashes.
 
+The UI startup contract also requires the engine to report MCP protocol
+`2024-11-05` and a non-empty engine version. Keep this check in the clean-machine
+TUI smoke test when changing the engine/client boundary.
+
 Archive ordering, timestamps, ownership metadata, and the gzip header are normalized
 from the tagged commit, so rebuilding the same tag produces identical archive bytes.
 
-The workflow uploads artifacts but does not publish a GitHub release or modify a
-package registry. Promote the reviewed artifacts explicitly and retain the prior
-version for rollback. Never overwrite a published tag; cut a new patch release.
+The workflow publishes a GitHub Release with all four archives and one combined
+`SHA256SUMS` file. It does not modify a package registry. Retain the prior version
+for rollback and never overwrite a published tag; cut a new patch release.
