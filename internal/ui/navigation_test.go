@@ -190,6 +190,20 @@ func TestScanViewKeepsCoverageAndQuestionLanguage(t *testing.T) {
 	}
 }
 
+func TestScanAndHubsShortcutsReachDedicatedScreens(t *testing.T) {
+	a := navigationFixture()
+	model, cmd := a.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}})
+	a = model.(App)
+	if cmd == nil || a.returnView != viewOverview {
+		t.Fatal("f should start scan and remember the current screen")
+	}
+	model, _ = a.handleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	a = model.(App)
+	if a.view != viewHubs {
+		t.Fatalf("h should open hubs, got %v", a.view)
+	}
+}
+
 func TestOverviewSubsystemPathExpandsNestedTree(t *testing.T) {
 	m := treeModel{root: "", requestedPath: "src/http"}
 	if next := m.onFolder(folderLoadedMsg{path: "", entries: []mcp.FolderEntry{{IsDir: true, Label: "src", Path: "src"}}}); next != "src" {
