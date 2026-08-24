@@ -188,6 +188,15 @@ go install github.com/UnboundCompute/lachesis-ui@v0.1.1
 Replace `v0.1.1` with the reviewed release tag you intend to deploy; avoid
 `@latest` in production automation.
 
+On macOS or Linux, the repository also provides a checksum-verifying bootstrap
+for the published archive. It detects the host architecture and installs the
+binary under `~/.lachesis/bin` without requiring Go:
+
+```sh
+LACHESIS_UI_VERSION=v0.1.1 ./scripts/install-ui-binary.sh
+export PATH="$HOME/.lachesis/bin:$PATH"
+```
+
 ### Not pip or npm
 
 `lachesis-ui` is a static Go binary, so it is **not** a pip or npm package. The
