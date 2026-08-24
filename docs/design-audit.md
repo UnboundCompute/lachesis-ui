@@ -31,7 +31,8 @@ showing a red “bug” badge would create a dangerous false promise.
 | Reaches witness | implemented with unavailable-evidence state | `reaches` |
 | Skeleton | implemented with unavailable-evidence state | `skeleton` |
 | Command palette | command entry is wired through `:`; compact command list is the next visual refinement | MCP tool names |
-| Hubs artboard | represented by Overview “good places to start” | `hubs` |
+| Hubs artboard | implemented as a dedicated navigable table | `hubs` |
+| Scan workflow | implemented as a dedicated queue/census screen | `scan` |
 
 ## Known gaps and stubs
 
