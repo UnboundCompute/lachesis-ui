@@ -88,7 +88,7 @@ func resolveGraph(flagVal string, args []string) (path, name string, err error) 
 	}
 	graphs := mcp.ListGraphs()
 	if len(graphs) == 0 {
-		return "", "", fmt.Errorf("no graphs found in %s\n\nBuild one first:\n  lachesis index <source_dir>\nor pass a path:\n  lachesis-ui --graph <path.kuzu>", mcp.GraphsDir())
+		return "", "", fmt.Errorf("no graphs found in %s\n\nBuild one first:\n  %s <source_dir>\nor pass a path:\n  lachesis-ui --graph <path.kuzu>", mcp.GraphsDir(), mcp.BuildGraphHelper())
 	}
 	return graphs[0].Path, graphs[0].Name, nil
 }
