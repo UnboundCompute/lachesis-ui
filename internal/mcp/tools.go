@@ -406,3 +406,128 @@ func (c *Client) Search(name string, limit int) ([]Match, int, error) {
 	}
 	return out, res.Total, nil
 }
+
+// Candidate is a neutral evidence row from the hunting catalog. The server's
+// capsule intentionally evolves, so the UI keeps the stable triage fields and
+// preserves the complete payload for detail screens.
+type Candidate struct {
+	ID         string         `json:"id"`
+	Rank       float64        `json:"rank"`
+	Entrypoint string         `json:"entrypoint"`
+	Source     string         `json:"source"`
+	Sink       string         `json:"sink"`
+	Kind       string         `json:"kind"`
+	File       string         `json:"file"`
+	Line       int            `json:"line"`
+	Guard      string         `json:"guard"`
+	Status     string         `json:"status"`
+	Raw        map[string]any `json:"-"`
+}
+
+func (c *Client) Candidates(limit int) ([]Candidate, error) {
+	raw, err := c.Call("candidates", map[string]any{"limit": limit, "detail": "compact"})
+	if err != nil {
+		return nil, err
+	}
+	var env map[string]any
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return nil, err
+	}
+	if msg, ok := env["error"].(string); ok && msg != "" {
+		return nil, fmt.Errorf("%s", msg)
+	}
+	var list []any
+	for _, key := range []string{"candidates", "rows", "items", "results"} {
+		if v, ok := env[key].([]any); ok && len(v) > 0 {
+			list = v
+			break
+		}
+	}
+	rows := make([]Candidate, 0, len(list))
+	for _, item := range list {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		c := Candidate{Raw: m}
+		c.ID = stringField(m, "id", "candidate_id")
+		c.Entrypoint = stringField(m, "entrypoint", "source", "function")
+		c.Source = stringField(m, "source", "src", "entrypoint")
+		c.Sink = stringField(m, "sink", "callee")
+		c.Kind = stringField(m, "kind", "family", "constructor")
+		c.File = stringField(m, "file", "site_file")
+		c.Line = intField(m, "line", "site_line")
+		c.Guard = stringField(m, "guard", "dominance")
+		c.Status = stringField(m, "status")
+		if n, ok := m["rank"].(float64); ok {
+			c.Rank = n
+		}
+		rows = append(rows, c)
+	}
+	return rows, nil
+}
+
+func stringField(m map[string]any, keys ...string) string {
+	for _, k := range keys {
+		if v, ok := m[k].(string); ok && v != "" {
+			return v
+		}
+	}
+	return ""
+}
+func intField(m map[string]any, keys ...string) int {
+	for _, k := range keys {
+		switch v := m[k].(type) {
+		case float64:
+			return int(v)
+		case int:
+			return v
+		}
+	}
+	return 0
+}
+
+// CandidateDetail and Skeleton intentionally use raw JSON: these tools carry
+// evidence fields that differ by catalog constructor and language.
+func (c *Client) CandidateDetail(id string) (map[string]any, error) {
+	raw, err := c.Call("candidate_detail", map[string]any{"candidate_id": id})
+	if err != nil {
+		return nil, err
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *Client) Reaches(src, sink string) (map[string]any, error) {
+	raw, err := c.Call("reaches", map[string]any{"src": src, "sink": sink})
+	if err != nil {
+		return nil, err
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *Client) Skeleton(function, candidateID string) (map[string]any, error) {
+	args := map[string]any{}
+	if function != "" {
+		args["function"] = function
+	}
+	if candidateID != "" {
+		args["candidate_id"] = candidateID
+	}
+	raw, err := c.Call("skeleton", args)
+	if err != nil {
+		return nil, err
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}

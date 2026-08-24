@@ -22,6 +22,10 @@ const (
 	viewOverview view = iota
 	viewTree
 	viewNeighborhood
+	viewFindings
+	viewFindingDetail
+	viewReaches
+	viewSkeleton
 )
 
 // App is the root Bubbletea model.
@@ -41,11 +45,14 @@ type App struct {
 	tree      treeModel
 	neigh     neighModel
 	neighInit bool // whether the neighborhood has ever been loaded
+	findings  findingsModel
 
-	searching bool
-	search    textinput.Model
-	results   searchModel
-	help      bool
+	searching  bool
+	search     textinput.Model
+	results    searchModel
+	help       bool
+	palette    bool
+	paletteSel int
 }
 
 // New builds the root model around a connected client.
@@ -68,6 +75,7 @@ func New(client *mcp.Client, graph string) App {
 		tree:     newTree(),
 		neigh:    newNeigh(),
 		results:  newSearch(),
+		findings: newFindings(),
 	}
 }
 
@@ -144,6 +152,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case searchResultsMsg:
 		a.results.onResults(msg)
 		return a, nil
+	case candidatesLoadedMsg:
+		a.findings.rows = msg.rows
+		a.view = viewFindings
+		a.ready = true
+		return a, nil
+	case candidateDetailLoadedMsg:
+		a.findings.active, a.findings.detail, a.view = msg.candidate, msg.data, viewFindingDetail
+		return a, nil
+	case reachesLoadedMsg:
+		a.findings.active, a.findings.path, a.view = msg.candidate, msg.data, viewReaches
+		return a, nil
+	case skeletonLoadedMsg:
+		a.findings.active, a.findings.skeleton, a.view = msg.candidate, msg.data, viewSkeleton
+		return a, nil
 	}
 	return a, nil
 }
@@ -193,11 +215,55 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 	}
+	if a.palette {
+		switch msg.String() {
+		case "esc":
+			a.palette = false
+			return a, nil
+		case "up", "k":
+			if a.paletteSel > 0 {
+				a.paletteSel--
+			}
+			return a, nil
+		case "down", "j":
+			if a.paletteSel < 4 {
+				a.paletteSel++
+			}
+			return a, nil
+		case "enter":
+			a.palette = false
+			if a.paletteSel == 0 {
+				return a, loadCandidatesCmd(a.client)
+			}
+			if a.paletteSel == 1 {
+				a.searching = true
+				a.search.SetValue("")
+				a.search.Focus()
+				return a, textinput.Blink
+			}
+			if a.paletteSel == 2 {
+				a.view = viewTree
+				return a, a.tree.open(&a, "")
+			}
+			if a.paletteSel == 3 {
+				a.view = viewOverview
+				return a, nil
+			}
+			return a, nil
+		}
+		return a, nil
+	}
 
 	switch msg.String() {
 	case "?":
 		a.help = true
 		return a, nil
+	case ":":
+		a.palette = true
+		a.paletteSel = 0
+		return a, nil
+	case "tab":
+		return a, loadCandidatesCmd(a.client)
 	case "ctrl+c", "q":
 		return a, tea.Quit
 	case "/":
@@ -221,6 +287,10 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 	case "esc":
+		if a.view == viewFindingDetail || a.view == viewReaches || a.view == viewSkeleton {
+			a.view = viewFindings
+			return a, nil
+		}
 		if a.view != viewOverview {
 			a.view = viewOverview
 			a.err = nil
@@ -239,6 +309,24 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, a.tree.update(&a, msg)
 	case viewNeighborhood:
 		return a, a.neigh.update(&a, msg)
+	case viewFindings:
+		return a, a.findings.update(&a, msg)
+	case viewFindingDetail:
+		switch msg.String() {
+		case "r":
+			a.view = viewReaches
+			return a, loadReachesCmd(a.client, a.findings.active)
+		case "s":
+			a.view = viewSkeleton
+			return a, loadSkeletonCmd(a.client, a.findings.active)
+		case "k":
+			a.statusHint = "marked for review in this session (no persistence tool exists)"
+		}
+	case viewReaches:
+		if msg.String() == "s" {
+			a.view = viewSkeleton
+			return a, loadSkeletonCmd(a.client, a.findings.active)
+		}
 	}
 	return a, nil
 }
@@ -269,6 +357,14 @@ func (a App) View() string {
 			body = a.tree.view(&a, bodyHeight)
 		case viewNeighborhood:
 			body = a.neigh.view(&a, bodyHeight)
+		case viewFindings:
+			body = a.findings.list(&a, bodyHeight)
+		case viewFindingDetail:
+			body = a.findings.detailView(&a, bodyHeight)
+		case viewReaches:
+			body = a.findings.reachesView(&a, bodyHeight)
+		case viewSkeleton:
+			body = a.findings.skeletonView(&a, bodyHeight)
 		}
 	}
 	body = lipgloss.NewStyle().Height(bodyHeight).MaxHeight(bodyHeight).Render(body)
@@ -279,6 +375,9 @@ func (a App) View() string {
 	}
 	if a.help {
 		out = a.overlayHelp(out)
+	}
+	if a.palette {
+		out = a.overlayPalette(out)
 	}
 	return stApp.Width(a.width).Height(a.height).Render(out)
 }
@@ -302,6 +401,9 @@ func (a App) renderHeader() string {
 		right = stDim.Render("called from ") + stFg.Render(fmt.Sprintf("%d", len(a.neigh.callers))) +
 			stDim.Render(" · calls ") + stFg.Render(fmt.Sprintf("%d", len(a.neigh.callees))) +
 			"  " + stFainter.Render("<[> back  <]> fwd")
+	default:
+		left = chip + "  " + stCyanB.Render("Findings")
+		right = stDim.Render("evidence review")
 	}
 	left = "  " + left
 	right += "  "
@@ -328,12 +430,16 @@ func (a App) renderStatus() string {
 		hints = key("↑↓", "move/scroll") + key("→", "expand/select symbol") + key("b", "full source") + key("enter", "see symbol map")
 	case viewNeighborhood:
 		hints = key("enter", "open selected") + key("b", "full body/preview") + key("↑↓", "move/scroll") + key("tab", "switch side") + key("[ ]", "back/forward")
+	case viewFindings, viewFindingDetail, viewReaches, viewSkeleton:
+		hints = key("enter", "inspect") + key("r", "witness path") + key("s", "skeleton") + key("esc", "back")
 	}
 	label := "NAVIGATE"
 	if a.view == viewTree {
 		label = "TREE"
 	} else if a.view == viewNeighborhood {
 		label = "SYMBOL MAP"
+	} else if a.view >= viewFindings {
+		label = "FINDINGS"
 	}
 	mode := stStatusMode.Render(" " + label + " ")
 	quit := stDim.Render("<esc> overview  <?> help ")
@@ -389,6 +495,24 @@ func (a App) overlayHelp(base string) string {
 	fmt.Fprintln(&b, stCyanB.Render("esc")+"       "+stFg.Render("return to the overview"))
 	fmt.Fprintln(&b, stCyanB.Render("?")+"         "+stFg.Render("close this help"))
 	box := stPanel.Width(min(a.width-6, 72)).Render(b.String())
+	_ = base
+	return lipgloss.Place(a.width, a.height, lipgloss.Center, lipgloss.Center, box, lipgloss.WithWhitespaceChars(" "))
+}
+
+func (a App) overlayPalette(base string) string {
+	items := []string{"review candidates — evidence to inspect", "find a symbol — search the graph", "open source tree", "return to overview", "help"}
+	var b strings.Builder
+	fmt.Fprintln(&b, stCyanB.Render(":")+" "+stBright.Render("command palette"))
+	for i, item := range items {
+		prefix := "  "
+		if i == a.paletteSel {
+			prefix = selRule(true)
+		}
+		fmt.Fprintln(&b, prefix+stFg.Render(item))
+	}
+	fmt.Fprintln(&b)
+	fmt.Fprintln(&b, stDim.Render("↑↓ select   enter run   esc close"))
+	box := stPanel.Width(min(a.width-8, 72)).Render(b.String())
 	_ = base
 	return lipgloss.Place(a.width, a.height, lipgloss.Center, lipgloss.Center, box, lipgloss.WithWhitespaceChars(" "))
 }
