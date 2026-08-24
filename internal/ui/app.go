@@ -27,6 +27,7 @@ const (
 	viewReaches
 	viewSkeleton
 	viewToolResult
+	viewScan
 )
 
 // App is the root Bubbletea model.
@@ -51,6 +52,7 @@ type App struct {
 	toolName   string
 	toolBody   string
 	toolErr    error
+	scanData   map[string]any
 
 	searching  bool
 	search     textinput.Model
@@ -179,6 +181,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case toolResultMsg:
 		a.toolName, a.toolBody, a.toolErr, a.view = msg.name, msg.body, msg.err, viewToolResult
 		return a, nil
+	case scanLoadedMsg:
+		a.scanData, a.view = msg.data, viewScan
+		return a, nil
 	}
 	return a, nil
 }
@@ -241,7 +246,7 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return a, nil
 		case "down", "j":
-			if a.paletteSel < 4 {
+			if a.paletteSel < 5 {
 				a.paletteSel++
 			}
 			return a, nil
@@ -273,6 +278,10 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			if a.paletteSel == 3 {
 				a.returnView = a.view
+				return a, loadScanCmd(a.client)
+			}
+			if a.paletteSel == 4 {
+				a.returnView = a.view
 				return a, loadCandidatesCmd(a.client)
 			}
 			a.statusHint = "graph switching is not exposed by the current client session"
@@ -292,6 +301,9 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.palette = true
 		a.paletteSel = 0
 		return a, nil
+	case "f":
+		a.returnView = a.view
+		return a, loadScanCmd(a.client)
 	case "tab":
 		a.returnView = a.view
 		return a, loadCandidatesCmd(a.client)
@@ -323,6 +335,10 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		if a.view == viewFindings {
+			a.view = a.returnView
+			return a, nil
+		}
+		if a.view == viewScan || a.view == viewToolResult {
 			a.view = a.returnView
 			return a, nil
 		}
@@ -416,6 +432,8 @@ func (a App) View() string {
 			body = a.findings.skeletonView(&a, bodyHeight)
 		case viewToolResult:
 			body = a.toolView(bodyHeight)
+		case viewScan:
+			body = scanView(a.scanData, a.width, bodyHeight)
 		}
 	}
 	body = lipgloss.NewStyle().Height(bodyHeight).MaxHeight(bodyHeight).Render(body)
@@ -484,7 +502,7 @@ func (a App) renderStatus() string {
 		hints = key("↑↓", "move/scroll") + key("→", "expand/select symbol") + key("b", "full source") + key("enter", "see symbol map")
 	case viewNeighborhood:
 		hints = key("enter", "open selected") + key("b", "full body/preview") + key("↑↓", "move/scroll") + key("tab", "switch side") + key("[ ]", "back/forward")
-	case viewFindings, viewFindingDetail, viewReaches, viewSkeleton, viewToolResult:
+	case viewFindings, viewFindingDetail, viewReaches, viewSkeleton, viewToolResult, viewScan:
 		hints = key("enter", "inspect") + key("r", "witness path") + key("s", "skeleton") + key("esc", "back")
 	}
 	label := "NAVIGATE"
@@ -546,6 +564,7 @@ func (a App) overlayHelp(base string) string {
 	fmt.Fprintln(&b, stCyanB.Render("b")+"         "+stFg.Render("toggle the full source/body view"))
 	fmt.Fprintln(&b, stCyanB.Render("t")+"         "+stFg.Render("open the source tree"))
 	fmt.Fprintln(&b, stCyanB.Render("/")+"         "+stFg.Render("find a symbol by name"))
+	fmt.Fprintln(&b, stCyanB.Render("f")+"         "+stFg.Render("run a graph scan"))
 	fmt.Fprintln(&b, stCyanB.Render("esc")+"       "+stFg.Render("return to the overview"))
 	fmt.Fprintln(&b, stCyanB.Render("?")+"         "+stFg.Render("close this help"))
 	box := stPanel.Width(min(a.width-6, 72)).Render(b.String())
@@ -554,7 +573,7 @@ func (a App) overlayHelp(base string) string {
 }
 
 func (a App) overlayPalette(base string) string {
-	items := []string{"reaches        witness path from a source to a sink", "sources_of     reverse cone into a sink", "flow           forward cone from a value", "candidates     evidence to review", "load_graph     switch the loaded graph"}
+	items := []string{"reaches        witness path from a source to a sink", "sources_of     reverse cone into a sink", "flow           forward cone from a value", "scan           rank questions to investigate", "candidates     evidence to review", "load_graph     switch the loaded graph"}
 	var b strings.Builder
 	fmt.Fprintln(&b, stCyanB.Render(":")+" "+stBright.Render("command palette"))
 	for i, item := range items {

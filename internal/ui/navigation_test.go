@@ -157,7 +157,7 @@ func TestCommandPaletteHasBoundedSelection(t *testing.T) {
 		model, _ = a.handleKey(tea.KeyMsg{Type: tea.KeyDown})
 		a = model.(App)
 	}
-	if a.paletteSel != 4 {
+	if a.paletteSel != 5 {
 		t.Fatalf("palette selection escaped bounds: %d", a.paletteSel)
 	}
 	model, _ = a.handleKey(tea.KeyMsg{Type: tea.KeyEsc})
@@ -175,6 +175,18 @@ func TestToolResultViewExplainsUnavailableData(t *testing.T) {
 	plain := ansi.Strip(a.View())
 	if !strings.Contains(plain, "flow") || !strings.Contains(plain, "request failed") {
 		t.Fatalf("tool result did not explain failure: %q", plain)
+	}
+}
+
+func TestScanViewKeepsCoverageAndQuestionLanguage(t *testing.T) {
+	a := navigationFixture()
+	a.view = viewScan
+	a.scanData = map[string]any{"census": map[string]any{"scanned": 4}, "queue": []any{map[string]any{"entrypoint": "main", "sink": "write"}}}
+	plain := ansi.Strip(a.View())
+	for _, want := range []string{"SCAN", "coverage", "INVESTIGATION QUEUE", "not a proof"} {
+		if !strings.Contains(plain, want) {
+			t.Errorf("scan view missing %q", want)
+		}
 	}
 }
 

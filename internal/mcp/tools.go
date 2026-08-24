@@ -531,3 +531,17 @@ func (c *Client) Skeleton(function, candidateID string) (map[string]any, error) 
 	}
 	return out, nil
 }
+
+// Scan runs the server's bounded investigation scan. The response is kept as
+// JSON because queue rows and census fields vary by analysis constructor.
+func (c *Client) Scan(limit int) (map[string]any, error) {
+	raw, err := c.Call("scan", map[string]any{"limit": limit})
+	if err != nil {
+		return nil, err
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}

@@ -87,6 +87,7 @@ type toolResultMsg struct {
 	body string
 	err  error
 }
+type scanLoadedMsg struct{ data map[string]any }
 
 // ---- commands (client calls, off the UI goroutine) ------------------------
 
@@ -245,6 +246,16 @@ func loadToolCmd(c *mcp.Client, name string, args map[string]any) tea.Cmd {
 			return toolResultMsg{name: name, err: err}
 		}
 		return toolResultMsg{name: name, body: string(raw)}
+	}
+}
+
+func loadScanCmd(c *mcp.Client) tea.Cmd {
+	return func() tea.Msg {
+		d, err := c.Scan(40)
+		if err != nil {
+			return errMsg{err}
+		}
+		return scanLoadedMsg{d}
 	}
 }
 
