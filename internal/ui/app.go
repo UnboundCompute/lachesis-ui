@@ -379,6 +379,18 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, a.findings.update(&a, msg)
 	case viewFindingDetail:
 		switch msg.String() {
+		case "o", "c", "e":
+			name := or(a.findings.active.Entrypoint, a.findings.active.Source)
+			if name == "" {
+				a.statusHint = "this evidence row has no source symbol"
+				return a, nil
+			}
+			a.returnView = viewFindingDetail
+			a.view = viewNeighborhood
+			a.neighInit = true
+			a.neigh.pushHistory(name)
+			a.neigh.beginLoad(name)
+			return a, loadNeighborhoodCmd(a.client, name, a.root)
 		case "r":
 			a.view = viewReaches
 			return a, loadReachesCmd(a.client, a.findings.active)
@@ -394,6 +406,10 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return a, reviewCandidateCmd(a.client, a.findings.active.ID, "confirmed")
 		}
 	case viewReaches:
+		if msg.String() == "y" {
+			a.statusHint = "path copying is not exposed by the current terminal client"
+			return a, nil
+		}
 		if msg.String() == "s" {
 			a.view = viewSkeleton
 			return a, loadSkeletonCmd(a.client, a.findings.active)

@@ -67,8 +67,9 @@ The interaction model is intentionally wider than the static artboards:
 5. **A witness can be absent even when a candidate exists.** `reaches` follows
    a different edge set from the catalog. The Reaches screen therefore shows
    an explicit unavailable-evidence state and does not synthesize hops.
-6. **Whole-file source is outside the graph protocol.** The UI reads the local
-   checkout when available; remote/archived graphs can only show indexed bodies.
+6. **Whole-file source now has a read-only server fallback.** The UI prefers the
+   local checkout and asks the server's bounded `read_file` tool when the
+   checkout is unavailable. The response still reports truncation explicitly.
 
 ## MCP score notes
 
