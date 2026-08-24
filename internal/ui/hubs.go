@@ -7,7 +7,7 @@ import (
 	"github.com/UnboundCompute/lachesis-ui/internal/mcp"
 )
 
-func hubsView(rows []mcp.Hub, width, height int) string {
+func hubsView(rows []mcp.Hub, selected, width, height int) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, stColHead.Render("HUBS — centrality landmarks"))
 	fmt.Fprintln(&b, stDim.Render("Highly connected symbols are useful cold-start points, not an execution order."))
@@ -19,7 +19,7 @@ func hubsView(rows []mcp.Hub, width, height int) string {
 		}
 		role := strings.Join(h.Flags, ",")
 		line := fmt.Sprintf("%-23s %-10s %-20s %-5d %-5d %-8d %s", h.Name, h.Handle, fmt.Sprintf("%s:%d", h.File, h.Line), h.FanIn, h.FanOut, h.Degree, role)
-		fmt.Fprintln(&b, selRule(i == 0)+line)
+		fmt.Fprintln(&b, selRule(i == selected)+line)
 	}
 	if len(rows) == 0 {
 		fmt.Fprintln(&b, stFainter.Render("no centrality data returned"))

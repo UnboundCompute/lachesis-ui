@@ -202,6 +202,11 @@ func TestScanAndHubsShortcutsReachDedicatedScreens(t *testing.T) {
 	if a.view != viewHubs {
 		t.Fatalf("h should open hubs, got %v", a.view)
 	}
+	model, cmd = a.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	a = model.(App)
+	if a.view != viewNeighborhood || cmd == nil {
+		t.Fatal("enter on hubs should open the selected symbol neighborhood")
+	}
 }
 
 func TestOverviewSubsystemPathExpandsNestedTree(t *testing.T) {

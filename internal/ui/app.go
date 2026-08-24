@@ -54,6 +54,7 @@ type App struct {
 	toolBody   string
 	toolErr    error
 	scanData   map[string]any
+	hubSel     int
 
 	searching  bool
 	search     textinput.Model
@@ -426,6 +427,27 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if msg.String() == "esc" {
 			a.view = a.returnView
 		}
+	case viewHubs:
+		switch msg.String() {
+		case "up", "k":
+			if a.hubSel > 0 {
+				a.hubSel--
+			}
+		case "down", "j":
+			if a.hubSel+1 < len(a.overview.hubs) {
+				a.hubSel++
+			}
+		case "enter":
+			if a.hubSel < len(a.overview.hubs) {
+				name := a.overview.hubs[a.hubSel].Name
+				a.returnView = viewHubs
+				a.view = viewNeighborhood
+				a.neighInit = true
+				a.neigh.pushHistory(name)
+				a.neigh.beginLoad(name)
+				return a, loadNeighborhoodCmd(a.client, name, a.root)
+			}
+		}
 	}
 	return a, nil
 }
@@ -469,7 +491,7 @@ func (a App) View() string {
 		case viewScan:
 			body = scanView(a.scanData, a.width, bodyHeight)
 		case viewHubs:
-			body = hubsView(a.overview.hubs, a.width, bodyHeight)
+			body = hubsView(a.overview.hubs, a.hubSel, a.width, bodyHeight)
 		}
 	}
 	body = lipgloss.NewStyle().Height(bodyHeight).MaxHeight(bodyHeight).Render(body)
@@ -507,8 +529,16 @@ func (a App) renderHeader() string {
 			stDim.Render(" · calls ") + stFg.Render(fmt.Sprintf("%d", len(a.neigh.callees))) +
 			"  " + stFainter.Render("<[> back  <]> fwd")
 	default:
-		left = chip + "  " + stCyanB.Render("Findings")
-		right = stDim.Render("evidence review")
+		label := "Findings"
+		description := "evidence review"
+		if a.view == viewScan {
+			label, description = "Scan", "investigation queue"
+		}
+		if a.view == viewHubs {
+			label, description = "Hubs", "centrality landmarks"
+		}
+		left = chip + "  " + stCyanB.Render(label)
+		right = stDim.Render(description)
 	}
 	left = "  " + left
 	right += "  "
