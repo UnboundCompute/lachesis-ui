@@ -52,9 +52,11 @@ The interaction model is intentionally wider than the static artboards:
 1. **Candidate payload shape varies by catalog constructor.** The UI keeps
    stable triage fields and a raw evidence map. If a constructor omits a field,
    the screen says “not reported” rather than inventing data.
-2. **No server persistence for “killed” or “confirmed as bug”.** `k` currently
-   records a session-only status hint. A future MCP tool should persist a
-   review decision keyed by graph id and candidate id.
+2. **Review decisions are session-scoped.** The server now accepts `review` and
+   the UI's `k` action records a neutral decision keyed by candidate id for the
+   running session. Durable storage keyed by graph and candidate remains a
+   future product decision; the UI does not claim that session notes survive a
+   restart.
 3. **Opening `$EDITOR` is intentionally local.** The graph protocol returns
    source locations, not an editor session. The current source-tree fallback
    reads the checkout; editor integration should be added as a local launcher,
