@@ -117,16 +117,16 @@ To keep the stack outside your home directory (for example, on a CI volume), set
 LACHESIS_HOME=/var/cache/lachesis ./scripts/install.sh
 ```
 
-For reproducible deployments, pin the engine and catalog before installing (use
-reviewed release tags rather than mutable branches). Re-running the
-installer applies those refs to existing clean checkouts and refuses to touch a
+The installer defaults to the reviewed engine `v0.1.7`, Atropos `v1.7.1`, and UI
+`v0.1.1` releases. For strongest reproducibility, pin the engine and catalog to
+reviewed immutable SHAs before installing. Re-running the installer applies those refs to existing clean checkouts and refuses to touch a
 checkout with local edits or untracked files:
 
 ```sh
-LACHESIS_REF=<lachesis-release-tag> ATROPOS_REF=<atropos-release-tag> ./scripts/install.sh
+LACHESIS_REF=v0.1.7 ATROPOS_REF=v1.7.1 ./scripts/install.sh
 ```
 
-The installer pins its binary fallback to `v0.1.0`; set `LACHESIS_UI_REF` to a
+The installer pins its binary fallback to `v0.1.1`; set `LACHESIS_UI_REF` to a
 reviewed tag or commit when selecting another UI release.
 
 The generated `build-graph.sh` helper bounds each frontend invocation to 3,600
@@ -158,10 +158,10 @@ go build -trimpath -o "$HOME/.lachesis/bin/lachesis-ui" .
 For a tagged release published to the Go module proxy, use:
 
 ```sh
-go install github.com/UnboundCompute/lachesis-ui@v0.1.0
+go install github.com/UnboundCompute/lachesis-ui@v0.1.1
 ```
 
-Replace `v0.1.0` with the reviewed release tag you intend to deploy; avoid
+Replace `v0.1.1` with the reviewed release tag you intend to deploy; avoid
 `@latest` in production automation.
 
 ### Not pip or npm

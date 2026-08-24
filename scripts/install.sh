@@ -25,7 +25,7 @@
 # Env overrides:
 #   LACHESIS_HOME   install root            (default: ~/.lachesis)
 #   PYTHON          python to build the venv (default: python3)
-#   LACHESIS_UI_REF release tag/commit for the go-install fallback (default: v0.1.0)
+#   LACHESIS_UI_REF release tag/commit for the go-install fallback (default: v0.1.1)
 #   LACHESIS_UI_VERSION version stamped into a source-built binary (default: 0.1.0)
 #   LACHESIS_BUILD_TIMEOUT maximum seconds for one generated graph build (default: 3600)
 #
@@ -69,9 +69,9 @@ VENV="$LACHESIS_HOME/venv"
 BIN="$LACHESIS_HOME/bin"
 GRAPHS="$LACHESIS_HOME/graphs"
 PYTHON="${PYTHON:-python3}"
-LACHESIS_REF="${LACHESIS_REF:-main}"
-ATROPOS_REF="${ATROPOS_REF:-main}"
-LACHESIS_UI_REF="${LACHESIS_UI_REF:-v0.1.0}"
+LACHESIS_REF="${LACHESIS_REF:-v0.1.7}"
+ATROPOS_REF="${ATROPOS_REF:-v1.7.1}"
+LACHESIS_UI_REF="${LACHESIS_UI_REF:-v0.1.1}"
 DEFAULT_UI_VERSION="0.1.0"
 if [ -f "$HERE/VERSION" ]; then
   DEFAULT_UI_VERSION="$(tr -d '[:space:]' < "$HERE/VERSION")"
