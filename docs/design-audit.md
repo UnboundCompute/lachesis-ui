@@ -52,11 +52,9 @@ The interaction model is intentionally wider than the static artboards:
 1. **Candidate payload shape varies by catalog constructor.** The UI keeps
    stable triage fields and a raw evidence map. If a constructor omits a field,
    the screen says “not reported” rather than inventing data.
-2. **Review decisions are session-scoped.** The server now accepts `review` and
-   the UI's `k` action records a neutral decision keyed by candidate id for the
-   running session. Durable storage keyed by graph and candidate remains a
-   future product decision; the UI does not claim that session notes survive a
-   restart.
+2. **Review decisions are graph-scoped notes.** The server accepts `review` and
+   stores a neutral decision keyed by graph and candidate in a sidecar outside
+   the graph database. The UI never presents that note as a safety verdict.
 3. **Opening `$EDITOR` is intentionally local.** The graph protocol returns
    source locations, not an editor session. The current source-tree fallback
    reads the checkout; editor integration should be added as a local launcher,

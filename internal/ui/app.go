@@ -184,7 +184,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.err != nil {
 				a.statusHint = "review could not be saved: " + msg.err.Error()
 			} else {
-				a.statusHint = "review decision saved for this session"
+				a.statusHint = "review decision saved for this graph"
 			}
 			return a, nil
 		}
@@ -410,7 +410,7 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				a.statusHint = "this evidence row has no review id"
 				return a, nil
 			}
-			a.statusHint = "saving review decision for this session"
+			a.statusHint = "saving review decision for this graph"
 			return a, reviewCandidateCmd(a.client, a.findings.active.ID, "confirmed")
 		}
 	case viewReaches:
