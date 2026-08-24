@@ -167,7 +167,9 @@ func (m *overviewModel) view(a *App, h int) string {
 	// SUBSYSTEMS — two columns of bordered cards, matching the map layout.
 	fmt.Fprintln(&b, stColHead.Render("AREAS — what lives where"))
 	fmt.Fprintln(&b, stDim.Render("Choose an area to see its files and symbols."))
-	if len(m.meta) > 0 {
+	if counts, ok := m.meta["counts"].(map[string]any); ok {
+		fmt.Fprintln(&b, stFainter.Render(fmt.Sprintf("graph context · %v files · %v functions · %v with source bodies · %v diagnostics", counts["files"], counts["functions"], counts["functions_with_body"], counts["diagnostics"])))
+	} else if len(m.meta) > 0 {
 		fmt.Fprintln(&b, stFainter.Render("graph context available · coverage metadata loaded"))
 	}
 	cardW := (contentW - 2) / 2
