@@ -132,7 +132,7 @@ func startupTimeout() time.Duration {
 func (c *Client) initialize() error {
 	raw, err := c.request("initialize", map[string]any{
 		"protocolVersion": "2024-11-05",
-		"clientInfo":      map[string]any{"name": "lachesis-ui", "version": Version},
+		"clientInfo":      map[string]any{"name": "lachesis-ui", "version": BuildVersion()},
 		"capabilities":    map[string]any{},
 	})
 	if err != nil {

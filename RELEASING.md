@@ -27,8 +27,9 @@ On macOS, the equivalent verification command is:
 shasum -a 256 -c SHA256SUMS
 ```
 
-The workflow stamps each binary with the tag version; verify a downloaded binary with
-`./lachesis-ui --version` before promoting it.
+The workflow stamps each binary with the tag version; `go install ...@vTAG` also
+reports the module tag through Go build metadata. Verify a downloaded or installed
+binary with `./lachesis-ui --version` before promoting it.
 
 The release workflow extracts the native Linux amd64 archive and performs that version
 smoke test against the extracted binary; the other targets are cross-compiled and

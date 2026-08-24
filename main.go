@@ -27,7 +27,7 @@ func main() {
 	flag.Parse()
 
 	if *versionF {
-		fmt.Printf("lachesis-ui %s\n", mcp.Version)
+		fmt.Printf("lachesis-ui %s\n", mcp.BuildVersion())
 		return
 	}
 

@@ -3,6 +3,7 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"strings"
 )
 
@@ -10,6 +11,19 @@ import (
 // builds replace it with the tag version via -ldflags; source builds retain the
 // current development default.
 var Version = "0.1.0"
+
+// BuildVersion preserves release ldflags for native archives, while making
+// `go install github.com/UnboundCompute/lachesis-ui@vX.Y.Z` report the module
+// version embedded by the Go toolchain instead of the development fallback.
+func BuildVersion() string {
+	if Version != "0.1.0" {
+		return Version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return strings.TrimPrefix(info.Main.Version, "v")
+	}
+	return Version
+}
 
 // ---- shared row shapes (as the engine emits them) -------------------------
 

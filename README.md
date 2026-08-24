@@ -129,6 +129,10 @@ LACHESIS_REF=v0.1.7 ATROPOS_REF=v1.7.1 ./scripts/install.sh
 The installer pins its binary fallback to `v0.1.1`; set `LACHESIS_UI_REF` to a
 reviewed tag or commit when selecting another UI release.
 
+Both release archives and `go install ...@vX.Y.Z` report the installed UI version
+from the release tag. Source builds retain the development fallback unless
+`LACHESIS_UI_VERSION` or the release build ldflag sets it explicitly.
+
 The generated `build-graph.sh` helper bounds each frontend invocation to 3,600
 seconds by default. Set `LACHESIS_BUILD_TIMEOUT` before running the installer to
 use a different positive-integer limit.
