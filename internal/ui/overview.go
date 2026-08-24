@@ -18,6 +18,7 @@ import (
 type overviewModel struct {
 	root string
 	hubs []mcp.Hub
+	meta map[string]any
 
 	subs    []subRow  // subsystem cards, hub-density-ranked
 	entries []mcp.Hub // exported / dispatch / callback entry points
@@ -52,6 +53,7 @@ func newOverview() overviewModel { return overviewModel{} }
 func (m *overviewModel) onLoaded(msg overviewLoadedMsg) {
 	m.root = msg.root
 	m.hubs = msg.hubs
+	m.meta = msg.meta
 
 	// Hub density per subsystem: a real signal for "what is this built around".
 	counts := map[string]int{}
@@ -165,6 +167,9 @@ func (m *overviewModel) view(a *App, h int) string {
 	// SUBSYSTEMS — two columns of bordered cards, matching the map layout.
 	fmt.Fprintln(&b, stColHead.Render("AREAS — what lives where"))
 	fmt.Fprintln(&b, stDim.Render("Choose an area to see its files and symbols."))
+	if len(m.meta) > 0 {
+		fmt.Fprintln(&b, stFainter.Render("graph context available · coverage metadata loaded"))
+	}
 	cardW := (contentW - 2) / 2
 	for i := 0; i < len(m.subs); i += 2 {
 		left := m.subsystemCard(i, cardW)

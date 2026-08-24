@@ -34,6 +34,7 @@ type overviewLoadedMsg struct {
 	hubs  []mcp.Hub
 	dirs  []mcp.FolderEntry // top-level subsystems (dirs under root)
 	files int
+	meta  map[string]any
 }
 
 type folderLoadedMsg struct {
@@ -117,7 +118,8 @@ func loadOverviewCmd(c *mcp.Client) tea.Cmd {
 				}
 			}
 		}
-		return overviewLoadedMsg{root: displayRoot, hubs: hubs, dirs: dirs, files: files}
+		meta, _ := c.Coverage()
+		return overviewLoadedMsg{root: displayRoot, hubs: hubs, dirs: dirs, files: files, meta: meta}
 	}
 }
 

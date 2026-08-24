@@ -545,3 +545,15 @@ func (c *Client) Scan(limit int) (map[string]any, error) {
 	}
 	return out, nil
 }
+
+func (c *Client) Coverage() (map[string]any, error) {
+	raw, err := c.Call("coverage_map", map[string]any{"component_depth": 1, "limit": 100})
+	if err != nil {
+		return nil, err
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
