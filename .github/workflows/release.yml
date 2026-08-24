@@ -98,6 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      attestations: write
     steps:
       - name: Collect release archives
         uses: actions/download-artifact@v4
@@ -107,6 +108,10 @@ jobs:
           merge-multiple: true
       - name: Create combined checksum file
         run: sha256sum dist/*.tar.gz > dist/SHA256SUMS
+      - name: Attest release archives
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*.tar.gz
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
