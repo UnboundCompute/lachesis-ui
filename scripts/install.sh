@@ -254,7 +254,7 @@ fi
 ENGINE_SHA="$(git -C "$SRC/lachesis" rev-parse HEAD)"
 CATALOG_SHA="$(git -C "$SRC/atropos" rev-parse HEAD)"
 UI_SHA=""
-if git -C "$HERE" rev-parse HEAD >/dev/null 2>&1; then
+if [ -z "$LACHESIS_UI_BINARY" ] && git -C "$HERE" rev-parse HEAD >/dev/null 2>&1; then
   UI_SHA="$(git -C "$HERE" rev-parse HEAD)"
 fi
 "$PYTHON" - "$LACHESIS_HOME/stack-manifest.json" \
