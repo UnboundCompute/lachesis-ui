@@ -29,6 +29,7 @@
 #   PYTHON          python to build the venv (default: python3)
 #   LACHESIS_UI_REF release tag/commit for the go-install fallback (default: v0.1.1)
 #   LACHESIS_UI_VERSION version stamped into a source-built binary (default: 0.1.0)
+#   LACHESIS_UI_BINARY path to a downloaded release binary (skips the Go build)
 #   LACHESIS_BUILD_TIMEOUT maximum seconds for one generated graph build (default: 3600)
 #
 set -euo pipefail
@@ -79,6 +80,7 @@ if [ -f "$HERE/VERSION" ]; then
   DEFAULT_UI_VERSION="$(tr -d '[:space:]' < "$HERE/VERSION")"
 fi
 LACHESIS_UI_VERSION="${LACHESIS_UI_VERSION:-$DEFAULT_UI_VERSION}"
+LACHESIS_UI_BINARY="${LACHESIS_UI_BINARY:-}"
 LACHESIS_BUILD_TIMEOUT="${LACHESIS_BUILD_TIMEOUT:-3600}"
 
 LACHESIS_REPO="https://github.com/UnboundCompute/lachesis.git"
@@ -125,8 +127,9 @@ if sys.version_info < (3, 10):
         f"Python 3.10+ is required (found {sys.version_info.major}.{sys.version_info.minor})"
     )
 PY
-need go
-"$PYTHON" - "$(go version)" <<'PY'
+if [ -z "$LACHESIS_UI_BINARY" ]; then
+  need go
+  "$PYTHON" - "$(go version)" <<'PY'
 import re
 import sys
 
@@ -139,6 +142,7 @@ if found < (1, 24, 2):
         f"Go 1.24.2+ is required (found {found[0]}.{found[1]}.{found[2]})"
     )
 PY
+fi
 
 mkdir -p "$SRC" "$BIN" "$GRAPHS"
 
@@ -227,8 +231,13 @@ chmod +x "$LACHESIS_HOME/build-graph.sh"
 cp "$HERE/scripts/doctor.sh" "$LACHESIS_HOME/doctor.sh"
 chmod +x "$LACHESIS_HOME/doctor.sh"
 
-# ---- 5. build the UI ------------------------------------------------------
-if [ -f "$HERE/main.go" ]; then
+# ---- 5. install or build the UI ------------------------------------------
+if [ -n "$LACHESIS_UI_BINARY" ]; then
+  [ -x "$LACHESIS_UI_BINARY" ] || die "LACHESIS_UI_BINARY is not executable: $LACHESIS_UI_BINARY"
+  info "installing UI binary from $LACHESIS_UI_BINARY"
+  cp "$LACHESIS_UI_BINARY" "$BIN/lachesis-ui"
+  chmod +x "$BIN/lachesis-ui"
+elif [ -f "$HERE/main.go" ]; then
   info "building lachesis-ui from source checkout"
   (cd "$HERE" && go build -trimpath \
     -ldflags="-s -w -X github.com/UnboundCompute/lachesis-ui/internal/mcp.Version=$LACHESIS_UI_VERSION" \

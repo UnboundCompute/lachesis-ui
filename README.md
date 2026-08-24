@@ -95,10 +95,11 @@ and lays them out as:
 The installer also vendors Lachesis's pinned TypeScript compiler, so the resulting
 stack can analyze TypeScript without a separate Node/npm setup.
 
-Re-running `install.sh` updates the checkouts in place. Requirements: `git`,
-`python3` (3.10–3.12 are the engine's release-tested versions), and Go 1.24.2+ to
-build the binary. Verify newer Python versions against the engine/Kùzu dependency set
-before using them in production.
+Re-running `install.sh` updates the checkouts in place. Requirements: `git` and
+`python3` (3.10–3.12 are the engine's release-tested versions). Source installs
+also need Go 1.24.2+ to build the binary; when using a downloaded release binary,
+set `LACHESIS_UI_BINARY` and no Go toolchain is required. Verify newer Python
+versions against the engine/Kùzu dependency set before using them in production.
 The installer takes an atomic lock, so concurrent invocations fail safely rather than
 mutating the shared virtualenv and checkouts at the same time.
 
@@ -154,6 +155,13 @@ a version other than the default `0.1.0`:
 
 ```sh
 LACHESIS_UI_VERSION=1.2.0 ./scripts/install.sh
+```
+
+To use a downloaded, checksum-verified UI release archive without installing Go,
+extract its `lachesis-ui` binary and pass it to the same stack installer:
+
+```sh
+LACHESIS_UI_BINARY=/path/to/lachesis-ui ./scripts/install.sh
 ```
 
 Then put the binary on your PATH:
