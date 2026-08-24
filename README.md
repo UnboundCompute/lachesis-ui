@@ -185,7 +185,8 @@ Replace `v0.1.1` with the reviewed release tag you intend to deploy; avoid
 engine it drives is Python (`python -m pip install -e` from the checkout, which
 `install.sh` does for you). Tagged releases build Linux and macOS binaries for
 amd64 and arm64 in the `release binaries` workflow. Download the matching archive
-and verify its SHA-256 checksum before unpacking it:
+from the GitHub Release for the tag and verify its SHA-256 checksum before unpacking
+it:
 
 ```sh
 sha256sum -c SHA256SUMS --ignore-missing

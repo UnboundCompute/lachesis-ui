@@ -91,3 +91,26 @@ jobs:
         with:
           name: lachesis-ui-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/
+
+  publish:
+    name: publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Collect release archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: lachesis-ui-${{ github.ref_name }}-*
+          path: dist
+          merge-multiple: true
+      - name: Create combined checksum file
+        run: sha256sum dist/*.tar.gz > dist/SHA256SUMS
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/SHA256SUMS
+          generate_release_notes: true

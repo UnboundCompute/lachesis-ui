@@ -42,6 +42,6 @@ TUI smoke test when changing the engine/client boundary.
 Archive ordering, timestamps, ownership metadata, and the gzip header are normalized
 from the tagged commit, so rebuilding the same tag produces identical archive bytes.
 
-The workflow uploads artifacts but does not publish a GitHub release or modify a
-package registry. Promote the reviewed artifacts explicitly and retain the prior
-version for rollback. Never overwrite a published tag; cut a new patch release.
+The workflow publishes a GitHub Release with all four archives and one combined
+`SHA256SUMS` file. It does not modify a package registry. Retain the prior version
+for rollback and never overwrite a published tag; cut a new patch release.
