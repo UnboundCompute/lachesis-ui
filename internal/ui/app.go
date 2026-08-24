@@ -181,14 +181,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.findings.active, a.findings.skeleton, a.view = msg.candidate, msg.data, viewSkeleton
 		return a, nil
 	case toolResultMsg:
-		if msg.name == "review" {
-			if msg.err != nil {
-				a.statusHint = "review could not be saved: " + msg.err.Error()
-			} else {
-				a.statusHint = "review decision saved for this graph"
-			}
-			return a, nil
-		}
 		a.toolName, a.toolBody, a.toolErr, a.view = msg.name, msg.body, msg.err, viewToolResult
 		return a, nil
 	case scanLoadedMsg:
@@ -407,12 +399,7 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.view = viewSkeleton
 			return a, loadSkeletonCmd(a.client, a.findings.active)
 		case "k":
-			if a.findings.active.ID == "" {
-				a.statusHint = "this evidence row has no review id"
-				return a, nil
-			}
-			a.statusHint = "saving review decision for this graph"
-			return a, reviewCandidateCmd(a.client, a.findings.active.ID, "confirmed")
+			a.statusHint = "marked for review in this session; durable decisions are not available from the server"
 		}
 	case viewReaches:
 		if msg.String() == "y" {
@@ -447,6 +434,10 @@ func (a App) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				a.neigh.beginLoad(name)
 				return a, loadNeighborhoodCmd(a.client, name, a.root)
 			}
+		}
+	case viewScan:
+		if msg.String() == "r" {
+			return a, loadScanCmd(a.client)
 		}
 	}
 	return a, nil
@@ -570,6 +561,12 @@ func (a App) renderStatus() string {
 		hints = key("enter", "open selected") + key("b", "full body/preview") + key("↑↓", "move/scroll") + key("tab", "switch side") + key("[ ]", "back/forward")
 	case viewFindings, viewFindingDetail, viewReaches, viewSkeleton, viewToolResult, viewScan, viewHubs:
 		hints = key("enter", "inspect") + key("r", "witness path") + key("s", "skeleton") + key("esc", "back")
+		if a.view == viewScan {
+			hints = key("r", "run again") + key("tab", "findings") + key(":", "commands") + key("esc", "back")
+		}
+		if a.view == viewHubs {
+			hints = key("↑↓", "move") + key("enter", "open symbol") + key("esc", "back")
+		}
 	}
 	label := "NAVIGATE"
 	if a.view == viewTree {
@@ -577,7 +574,16 @@ func (a App) renderStatus() string {
 	} else if a.view == viewNeighborhood {
 		label = "SYMBOL MAP"
 	} else if a.view >= viewFindings {
-		label = "FINDINGS"
+		switch a.view {
+		case viewScan:
+			label = "SCAN"
+		case viewHubs:
+			label = "HUBS"
+		case viewToolResult:
+			label = "COMMAND"
+		default:
+			label = "FINDINGS"
+		}
 	}
 	mode := stStatusMode.Render(" " + label + " ")
 	quit := stDim.Render("<esc> overview  <?> help ")

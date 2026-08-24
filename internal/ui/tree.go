@@ -329,7 +329,7 @@ func (m *treeModel) maybeLoadOutline(a *App) tea.Cmd {
 	if fp == "" || fp == m.outlineFile {
 		return nil
 	}
-	return tea.Batch(loadOutlineCmd(a.client, fp), loadSourceCmd(a.client, a.root, fp))
+	return tea.Batch(loadOutlineCmd(a.client, fp), loadSourceCmd(a.root, fp))
 }
 
 func (m *treeModel) currentFilePath() string {

@@ -183,7 +183,7 @@ func TestScanViewKeepsCoverageAndQuestionLanguage(t *testing.T) {
 	a.view = viewScan
 	a.scanData = map[string]any{"census": map[string]any{"scanned": 4}, "queue": []any{map[string]any{"entrypoint": "main", "sink": "write"}}}
 	plain := ansi.Strip(a.View())
-	for _, want := range []string{"SCAN", "coverage", "INVESTIGATION QUEUE", "not a proof"} {
+	for _, want := range []string{"SCAN", "COVERAGE", "INVESTIGATION QUEUE", "not a proof"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("scan view missing %q", want)
 		}

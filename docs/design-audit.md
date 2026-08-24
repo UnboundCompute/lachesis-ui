@@ -53,9 +53,9 @@ The interaction model is intentionally wider than the static artboards:
 1. **Candidate payload shape varies by catalog constructor.** The UI keeps
    stable triage fields and a raw evidence map. If a constructor omits a field,
    the screen says “not reported” rather than inventing data.
-2. **Review decisions are graph-scoped notes.** The server accepts `review` and
-   stores a neutral decision keyed by graph and candidate in a sidecar outside
-   the graph database. The UI never presents that note as a safety verdict.
+2. **Review decisions are session-only UI notes.** The server currently has no
+   persistence tool for them, so the UI never presents a local mark as durable
+   or as a safety verdict.
 3. **Opening `$EDITOR` is intentionally local.** The graph protocol returns
    source locations, not an editor session. The current source-tree fallback
    reads the checkout; editor integration should be added as a local launcher,
@@ -66,9 +66,9 @@ The interaction model is intentionally wider than the static artboards:
 5. **A witness can be absent even when a candidate exists.** `reaches` follows
    a different edge set from the catalog. The Reaches screen therefore shows
    an explicit unavailable-evidence state and does not synthesize hops.
-6. **Whole-file source now has a read-only server fallback.** The UI prefers the
-   local checkout and asks the server's bounded `read_file` tool when the
-   checkout is unavailable. The response still reports truncation explicitly.
+6. **Whole-file source is local-checkout only.** The graph protocol exposes
+   declarations and function bodies; the UI reads complete files from the local
+   source tree and reports when that fallback is unavailable.
 
 ## MCP score notes
 

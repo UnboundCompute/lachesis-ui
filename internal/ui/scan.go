@@ -18,10 +18,19 @@ func scanView(data map[string]any, width, height int) string {
 		return padView(b.String(), width, height)
 	}
 	if census, ok := data["census"]; ok {
-		fmt.Fprintf(&b, "%s %v\n", stCyan.Render("coverage"), census)
+		fmt.Fprintln(&b, stCyan.Render("COVERAGE"))
+		if counts, ok := census.(map[string]any); ok {
+			fmt.Fprintf(&b, "  scanned %v entry points · skipped %v · queued %v · suppressed %v\n", counts["entrypoints_scanned"], counts["entrypoints_skipped"], counts["queued"], counts["suppressed"])
+		} else {
+			fmt.Fprintf(&b, "  %v\n", census)
+		}
 	}
 	if page, ok := data["page"]; ok {
-		fmt.Fprintf(&b, "%s %v\n", stDim.Render("page"), page)
+		if meta, ok := page.(map[string]any); ok {
+			fmt.Fprintf(&b, "%s%v questions · %v more\n", stDim.Render("page "), meta["total"], meta["has_more"])
+		} else {
+			fmt.Fprintf(&b, "%s%v\n", stDim.Render("page "), page)
+		}
 	}
 	if queue, ok := data["queue"]; ok {
 		fmt.Fprintln(&b)
@@ -40,6 +49,11 @@ func scanView(data map[string]any, width, height int) string {
 	if _, ok := data["queue"]; !ok {
 		fmt.Fprintln(&b)
 		fmt.Fprintln(&b, stAmber.Render("no investigation rows were returned"))
+	}
+	if queue, ok := data["queue"].([]any); ok && len(queue) == 0 {
+		fmt.Fprintln(&b)
+		fmt.Fprintln(&b, stGreenB.Render("Nothing needs investigation from this scan."))
+		fmt.Fprintln(&b, stDim.Render("Try / to inspect a symbol, t for the source tree, or : for graph commands."))
 	}
 	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, stFainter.Render("Use Findings to inspect a candidate capsule; unknown coverage stays visible."))
