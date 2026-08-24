@@ -150,7 +150,7 @@ func loadOutlineCmd(c *mcp.Client, file string) tea.Cmd {
 // loadSourceCmd is deliberately a best-effort companion to open_file. The
 // graph protocol exposes declarations and function bodies, not whole-file
 // text, so use the source checkout when its path is still available locally.
-func loadSourceCmd(root, file string) tea.Cmd {
+func loadSourceCmd(c *mcp.Client, root, file string) tea.Cmd {
 	return func() tea.Msg {
 		candidates := []string{}
 		if filepath.IsAbs(file) {
@@ -168,6 +168,13 @@ func loadSourceCmd(root, file string) tea.Cmd {
 				return sourceLoadedMsg{file: file, text: string(data)}
 			}
 			last = err
+		}
+		if c != nil {
+			if source, _, err := c.ReadFile(file, 1<<20); err == nil {
+				return sourceLoadedMsg{file: file, text: source}
+			} else {
+				last = err
+			}
 		}
 		return sourceLoadedMsg{file: file, err: last}
 	}

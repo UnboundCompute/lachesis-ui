@@ -557,3 +557,22 @@ func (c *Client) Coverage() (map[string]any, error) {
 	}
 	return out, nil
 }
+
+func (c *Client) ReadFile(file string, maxChars int) (string, bool, error) {
+	raw, err := c.Call("read_file", map[string]any{"file": file, "max_chars": maxChars})
+	if err != nil {
+		return "", false, err
+	}
+	var out struct {
+		Source    string `json:"source"`
+		Truncated bool   `json:"truncated"`
+		Error     string `json:"error"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return "", false, err
+	}
+	if out.Error != "" {
+		return "", false, fmt.Errorf("%s", out.Error)
+	}
+	return out.Source, out.Truncated, nil
+}
