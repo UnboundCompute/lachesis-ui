@@ -18,6 +18,7 @@
 #   ~/.lachesis/graphs         where built graphs land (UI's default search dir)
 #   ~/.lachesis/bin/lachesis-ui   the built UI binary
 #   ~/.lachesis/build-graph.sh    helper: build a graph from any source tree
+#   ~/.lachesis/stack-manifest.json exact resolved refs for the installed stack
 #
 # Re-running is safe: it updates existing clean checkouts to the requested refs
 # instead of silently retaining an older branch or commit.
@@ -234,6 +235,35 @@ else
   GOBIN="$BIN" go install "github.com/UnboundCompute/lachesis-ui@$LACHESIS_UI_REF"
 fi
 
+# Leave an inspectable receipt beside the installation. The requested refs alone
+# are not enough evidence: a release tag can move, and a shallow fetch resolves
+# the actual commit that the user received. Keep this file deterministic so it is
+# useful in bug reports and can be diffed across upgrades.
+ENGINE_SHA="$(git -C "$SRC/lachesis" rev-parse HEAD)"
+CATALOG_SHA="$(git -C "$SRC/atropos" rev-parse HEAD)"
+UI_SHA=""
+if git -C "$HERE" rev-parse HEAD >/dev/null 2>&1; then
+  UI_SHA="$(git -C "$HERE" rev-parse HEAD)"
+fi
+"$PYTHON" - "$LACHESIS_HOME/stack-manifest.json" \
+  "$LACHESIS_REF" "$ENGINE_SHA" "$ATROPOS_REF" "$CATALOG_SHA" \
+  "$LACHESIS_UI_REF" "$UI_SHA" "$LACHESIS_UI_VERSION" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+(output, engine_ref, engine_sha, catalog_ref, catalog_sha,
+ ui_ref, ui_sha, ui_version) = sys.argv[1:]
+manifest = {
+    "schema_version": 1,
+    "product": "lachesis-ui-stack",
+    "engine": {"repository": "UnboundCompute/lachesis", "requested_ref": engine_ref, "resolved_commit": engine_sha},
+    "catalog": {"repository": "UnboundCompute/atropos", "requested_ref": catalog_ref, "resolved_commit": catalog_sha},
+    "ui": {"repository": "UnboundCompute/lachesis-ui", "requested_ref": ui_ref, "resolved_commit": ui_sha or None, "version": ui_version},
+}
+Path(output).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+PY
+
 # ---- done -----------------------------------------------------------------
 cat <<DONE
 
@@ -242,6 +272,7 @@ $(info 'stack ready')
   engine   $SRC/lachesis   (venv: $VENV)
   catalog  $SRC/atropos
   UI       $BIN/lachesis-ui
+  receipt  $LACHESIS_HOME/stack-manifest.json
 
 Add the UI to your PATH:
 

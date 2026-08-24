@@ -88,6 +88,7 @@ and lays them out as:
 ~/.lachesis/graphs            built graphs land here  (the UI's default search dir)
 ~/.lachesis/bin/lachesis-ui   the UI binary
 ~/.lachesis/build-graph.sh    helper to build a graph from any source tree
+~/.lachesis/stack-manifest.json resolved engine/catalog/UI receipt
 ```
 
 The installer also vendors Lachesis's pinned TypeScript compiler, so the resulting
@@ -99,6 +100,11 @@ build the binary. Verify newer Python versions against the engine/Kùzu dependen
 before using them in production.
 The installer takes an atomic lock, so concurrent invocations fail safely rather than
 mutating the shared virtualenv and checkouts at the same time.
+
+Each install writes `~/.lachesis/stack-manifest.json`. It records the requested refs and
+the resolved engine and Atropos commits actually installed, plus the UI ref/version. Include
+this receipt in bug reports and preserve it with a graph or evidence artifact when you need
+to reproduce a result; a tag name by itself is not sufficient provenance.
 
 Unattended installs fail fast on stalled network transfers: Git aborts after 60 seconds
 below its low-speed threshold, and pip uses a 60-second default index/download timeout
