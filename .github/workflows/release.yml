@@ -109,7 +109,7 @@ jobs:
       - name: Create combined checksum file
         run: sha256sum dist/*.tar.gz > dist/SHA256SUMS
       - name: Attest release archives
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: dist/*.tar.gz
       - name: Publish release
